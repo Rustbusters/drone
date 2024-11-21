@@ -4,7 +4,7 @@ use wg_2024::drone::{Drone, DroneOptions};
 use wg_2024::network::NodeId;
 use wg_2024::packet::Packet;
 
-struct RustBusterDrone {
+pub struct RustBustersDrone {
     id: NodeId,
     sim_contr_send: Sender<Command>,
     sim_contr_recv: Receiver<Command>,
@@ -12,7 +12,7 @@ struct RustBusterDrone {
     pdr: f32,
 }
 
-impl Drone for RustBusterDrone {
+impl Drone for RustBustersDrone {
     fn new(options: DroneOptions) -> Self {
         todo!()
     }

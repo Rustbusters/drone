@@ -1,3 +1,3 @@
 mod drone;
 
-pub use drone::Drone;
+pub use drone::RustBustersDrone;
