@@ -1,16 +1,10 @@
-#![allow(unused)]
-
 use crossbeam_channel::{select, Receiver, Sender};
 use rand::Rng;
-use std::cmp::max;
 use std::collections::{HashMap, HashSet};
-use std::thread;
 use wg_2024::controller::Command;
 use wg_2024::drone::{Drone, DroneOptions};
 use wg_2024::network::{NodeId, SourceRoutingHeader};
-use wg_2024::packet::{
-    Ack, FloodRequest, FloodResponse, Fragment, Nack, NackType, NodeType, Packet, PacketType,
-};
+use wg_2024::packet::{Ack, FloodResponse, Nack, NackType, NodeType, Packet, PacketType};
 
 pub struct RustBustersDrone {
     id: NodeId,
@@ -19,7 +13,7 @@ pub struct RustBustersDrone {
     packet_recv: Receiver<Packet>,
     pdr: u8,
     packet_send: HashMap<NodeId, Sender<Packet>>,
-    recived_floods: HashSet<u64>,
+    received_floods: HashSet<u64>,
     optimized_routing: bool,
 }
 
@@ -31,8 +25,8 @@ impl Drone for RustBustersDrone {
             sim_contr_recv: options.sim_contr_recv,
             packet_recv: options.packet_recv,
             pdr: (options.pdr * 100.0) as u8,
-            packet_send: HashMap::new(),
-            recived_floods: HashSet::new(),
+            packet_send: options.packet_send,
+            received_floods: HashSet::new(),
             optimized_routing: true,
         }
     }
@@ -43,20 +37,14 @@ impl Drone for RustBustersDrone {
                 recv(self.packet_recv) -> packet_res => {
                     if let Ok(packet) = packet_res {
                         match packet.pack_type {
-                            PacketType::MsgFragment(_) => {
-                                self.forward_packet(packet, false);
-                            },
-                            PacketType::Nack(_) | PacketType::Ack(_) | PacketType::FloodResponse(_) => {
-                                self.forward_packet(packet, true);
-                            },
-                            PacketType::FloodRequest(query) => self.handle_flood(query),
-                            PacketType::FloodResponse(_) => unimplemented!(),
+                            PacketType::FloodRequest(_) => self.handle_flood(packet),
+                            _ => self.forward_packet(packet, true),
                         }
                     }
                 },
                 recv(self.sim_contr_recv) -> command_res => {
-                    if let Ok(_command) = command_res {
-                        Self::handle_command()
+                    if let Ok(command) = command_res {
+                        self.handle_command(command);
                     }
                 }
             }
@@ -66,42 +54,71 @@ impl Drone for RustBustersDrone {
 
 impl RustBustersDrone {
     fn forward_packet(&mut self, mut packet: Packet, allow_optimized: bool) {
+        let hop_index = packet.routing_header.hop_index;
+
+        // Step 1: Check if hops[hop_index] matches self.id
+        if packet.routing_header.hops[hop_index] != self.id {
+            self.send_nack(packet, NackType::UnexpectedRecipient(self.id), allow_optimized);
+            return;
+        }
+
+        // Step 2: Increment hop_index
         packet.routing_header.hop_index += 1;
 
-        let hop_index = packet.routing_header.hop_index;
-        if hop_index >= packet.routing_header.hops.len() {
+        // Step 3: Check if drone is the final destination
+        let nex_hop_index = packet.routing_header.hop_index;
+        if nex_hop_index >= packet.routing_header.hops.len() {
             self.send_nack(packet, NackType::DestinationIsDrone, allow_optimized);
             return;
         }
-        let next_hop = packet.routing_header.hops[hop_index];
 
+        // Step 4: Identify next hop and check if it's a neighbor
+        let next_hop = packet.routing_header.hops[nex_hop_index];
         if !self.packet_send.contains_key(&next_hop) {
             self.send_nack(packet, NackType::ErrorInRouting(next_hop), allow_optimized);
             return;
         }
 
-        let should_drop = match packet.pack_type {
+        // Step 5: Proceed based on packet type
+        match packet.pack_type {
             PacketType::MsgFragment(_) => {
-                let mut rng = rand::thread_rng();
-                rng.gen_range(0..100) < self.pdr
-            }
-            _ => false,
-        };
+                // Check for packet drop
+                let should_drop = {
+                    let mut rng = rand::thread_rng();
+                    rng.gen_range(0..100) < self.pdr
+                };
 
-        if should_drop {
-            self.send_nack(packet, NackType::Dropped, allow_optimized);
-            return;
-        }
+                if should_drop {
+                    self.send_nack(packet, NackType::Dropped, allow_optimized);
+                    return;
+                }
 
-        let next_sender = self.packet_send.get(&next_hop).unwrap(); // Cannot fail because we checked before
-        if let Err(e) = next_sender.send(packet.clone()) {
-            eprintln!("Error sending packet to {}: {}", next_hop, e);
-        } else if let PacketType::MsgFragment(ref fragment) = packet.pack_type {
-            self.send_ack(
-                packet.session_id,
-                fragment.fragment_index,
-                &packet.routing_header,
-            );
+                // Forward the packet to next_hop
+                let next_sender = self.packet_send.get(&next_hop).unwrap();
+                if let Err(e) = next_sender.send(packet.clone()) {
+                    eprintln!("Error sending packet to {}: {}", next_hop, e);
+                } else {
+                    // Send Ack to client
+                    if let PacketType::MsgFragment(ref fragment) = packet.pack_type {
+                        self.send_ack(
+                            packet.session_id,
+                            fragment.fragment_index,
+                            &packet.routing_header,
+                        );
+                    }
+                }
+            },
+            PacketType::Ack(_) | PacketType::Nack(_) | PacketType::FloodResponse(_) => {
+                // Forward these packets without dropping
+                let next_sender = self.packet_send.get(&next_hop).unwrap();
+                if let Err(e) = next_sender.send(packet.clone()) {
+                    eprintln!("Error sending packet to {}: {}", next_hop, e);
+                }
+            },
+            PacketType::FloodRequest(_) => {
+                // Should not reach here
+                eprintln!("Received FloodRequest in forward_packet, which should be handled in handle_flood.");
+            },
         }
     }
 
@@ -118,8 +135,8 @@ impl RustBustersDrone {
             return;
         }
 
-        let path_to_client = packet_routing_header.hops[0..hop_index].to_vec();
-        let reversed_path: Vec<NodeId> = path_to_client.into_iter().rev().collect();
+        let path_to_client = &packet_routing_header.hops[0..hop_index];
+        let reversed_path: Vec<NodeId> = path_to_client.iter().rev().cloned().collect();
 
         let hops = if self.optimized_routing {
             self.optimize_route(&reversed_path)
@@ -129,7 +146,6 @@ impl RustBustersDrone {
 
         let ack = Ack {
             fragment_index,
-            time_received: std::time::Instant::now(),
         };
 
         let ack_packet = Packet {
@@ -155,8 +171,8 @@ impl RustBustersDrone {
     fn send_nack(&mut self, packet: Packet, nack_type: NackType, allow_optimized: bool) {
         let hop_index = packet.routing_header.hop_index;
 
-        let path_to_sender = packet.routing_header.hops[0..=hop_index].to_vec();
-        let reversed_path = path_to_sender.into_iter().rev().collect::<Vec<NodeId>>();
+        let path_to_sender = &packet.routing_header.hops[0..=hop_index];
+        let reversed_path = path_to_sender.iter().rev().cloned().collect::<Vec<NodeId>>();
 
         let hops = if self.optimized_routing && allow_optimized {
             self.optimize_route(&reversed_path)
@@ -170,7 +186,6 @@ impl RustBustersDrone {
 
         let nack = Nack {
             fragment_index,
-            time_of_fail: std::time::Instant::now(),
             nack_type,
         };
 
@@ -180,7 +195,7 @@ impl RustBustersDrone {
             session_id: packet.session_id,
         };
 
-        let next_hop = nack_packet.routing_header.hops[0]; // TODO: check if this is correct
+        let next_hop = nack_packet.routing_header.hops[0];
 
         if !self.packet_send.contains_key(&next_hop) {
             eprintln!("Cannot send Nack, next hop {} is not a neighbor", next_hop);
@@ -195,16 +210,12 @@ impl RustBustersDrone {
     }
 
     fn optimize_route(&self, path: &[NodeId]) -> Vec<NodeId> {
-        if let Some((index, _)) = path
-            .iter()
-            .enumerate()
-            .rev()
-            .find(|&(_, &node_id)| self.packet_send.contains_key(&node_id))
-        {
-            path[index..].to_vec()
-        } else {
-            path.to_vec()
+        for (index, &node_id) in path.iter().enumerate() {
+            if self.packet_send.contains_key(&node_id) {
+                return path[index..].to_vec();
+            }
         }
+        path.to_vec()
     }
 
     fn get_fragment_index(packet: &Packet) -> u64 {
@@ -216,60 +227,72 @@ impl RustBustersDrone {
         }
     }
 
-    // Todo: Possiamo ottimizzare la risposta del FloodResponse inviandolo al primo che ho tra i vicini (forse?)
-    fn handle_flood(&mut self, mut query: FloodRequest) {
-        query.path_trace.push((self.id, NodeType::Drone));
+    fn handle_flood(&mut self, packet: Packet) {
+        if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
+            // Extract sender_id from the last node in path_trace
+            let sender_id = if let Some(&(last_node_id, _)) = flood_request.path_trace.last() {
+                last_node_id
+            } else {
+                // If path_trace is empty, this is the initiator
+                flood_request.initiator_id
+            };
 
-        if self.recived_floods.contains(&query.flood_id) {
-            let response = FloodResponse {
-                flood_id: query.flood_id,
-                // TODO: remove with Ricky's PR
-                source_routing_header: SourceRoutingHeader {
-                    hop_index: 0,
-                    hops: vec![],
-                },
-                path_trace: query.path_trace.clone(),
-            };
-            let packet = Packet {
-                pack_type: PacketType::FloodResponse(response),
-                routing_header: SourceRoutingHeader {
-                    hop_index: 0,
-                    hops: query.path_trace.iter().map(|(id, _)| *id).rev().collect(),
-                },
-                session_id: 1,
-            };
-        } else {
-            self.recived_floods.insert(query.flood_id);
+            // Add self to path_trace
+            flood_request.path_trace.push((self.id, NodeType::Drone));
+
+            if self.received_floods.contains(&flood_request.flood_id) {
+                // Send FloodResponse back to sender
+                let response = FloodResponse {
+                    flood_id: flood_request.flood_id,
+                    path_trace: flood_request.path_trace.clone(),
+                };
+                let response_packet = Packet {
+                    pack_type: PacketType::FloodResponse(response),
+                    routing_header: SourceRoutingHeader {
+                        hop_index: 0,
+                        hops: flood_request.path_trace.iter().map(|(id, _)| *id).rev().collect(),
+                    },
+                    session_id: packet.session_id,
+                };
+                if let Some(sender) = self.packet_send.get(&sender_id) {
+                    let _ = sender.send(response_packet);
+                }
+            } else {
+                self.received_floods.insert(flood_request.flood_id);
+                // Forward FloodRequest to neighbors except the sender
+                for (&neighbor_id, neighbor_sender) in &self.packet_send {
+                    if neighbor_id != sender_id {
+                        let packet = Packet {
+                            pack_type: PacketType::FloodRequest(flood_request.clone()),
+                            routing_header: SourceRoutingHeader {
+                                hop_index: 0,
+                                hops: vec![self.id, neighbor_id],
+                            },
+                            session_id: packet.session_id,
+                        };
+                        let _ = neighbor_sender.send(packet);
+                    }
+                }
+            }
         }
     }
 
-    fn handle_command() {
-        // TODO
-        unimplemented!()
+    fn handle_command(&mut self, command: Command) {
+        match command {
+            // Command::AddSender(sender, dst_id) => {
+            //     self.packet_send.insert(dst_id, sender);
+            // },
+            Command::Crash => {
+                // Terminate the drone's thread
+                std::process::exit(0);
+            },
+            // Command::SetPacketDropRate(new_pdr) => {
+            //     self.pdr = (new_pdr * 100.0) as u8;
+            // },
+            // Handle other commands as needed
+            _ => {}
+        }
     }
 
-    fn add_channel(&mut self, id: NodeId, sender: Sender<Packet>) {
-        self.packet_send.insert(id, sender);
-    }
-
-    // fn remove_channel(...) {...}
-}
-
-#[test]
-fn main() {
-    let handler = thread::spawn(move || {
-        let id = 1;
-        let (sim_contr_send, sim_contr_recv) = crossbeam_channel::unbounded();
-        let (_packet_send, packet_recv) = crossbeam_channel::unbounded();
-        let mut drone = RustBustersDrone::new(DroneOptions {
-            id,
-            sim_contr_recv,
-            sim_contr_send,
-            packet_recv,
-            pdr: 0.1,
-        });
-
-        drone.run();
-    });
-    handler.join().ok();
+    // Additional methods can be added as needed
 }
