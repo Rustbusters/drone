@@ -95,28 +95,50 @@ impl RustBustersDrone {
                         allow_optimized,
                     );
                     // Send PacketDropped event to the controller
-                    if let Err(e) = self.controller_send.send(NodeEvent::PacketDropped(packet.clone())) {
+                    if let Err(e) = self
+                        .controller_send
+                        .send(NodeEvent::PacketDropped(packet.clone()))
+                    {
                         eprintln!("Error sending PacketDropped event: {}", e);
                     }
                     return;
                 }
 
                 // Forward the packet to next_hop
-                let next_sender = self.packet_send.get(&next_hop).unwrap();
-                if let Err(e) = next_sender.send(packet.clone()) {
-                    eprintln!("Error sending packet to {}: {}", next_hop, e);
-                } else {
-                    // Send PacketSent event to the controller
-                    if let Err(e) = self.controller_send.send(NodeEvent::PacketSent(packet.clone())) {
-                        eprintln!("Error sending PacketSent event: {}", e);
+                let next_sender = self.packet_send.get(&next_hop);
+                if let Some(next_sender) = next_sender {
+                    if let Err(e) = next_sender.send(packet.clone()) {
+                        eprintln!("Error sending packet to {}: {}", next_hop, e);
+
+                        self.packet_send.remove(&next_hop); // TODO: lo rimuovo subito?
+                        eprintln!(
+                            "Neighbor {} has been removed from packet_send due to channel closure",
+                            next_hop
+                        );
+                        // Optionally, you might want to send a Nack back to the sender
+                        self.send_nack(packet, Nack::ErrorInRouting(next_hop), allow_optimized);
+
+                    } else {
+                        // Send PacketSent event to the controller
+                        if let Err(e) = self
+                            .controller_send
+                            .send(NodeEvent::PacketSent(packet.clone()))
+                        {
+                            eprintln!("Error sending PacketSent event: {}", e);
+                        }
+                        // Send Ack to client TODO: remove when issue #82 is resolved
+                        self.send_ack(
+                            packet.session_id,
+                            fragment.fragment_index,
+                            &packet.routing_header,
+                        );
                     }
-                    // Send Ack to client TODO: remove when issue #82 is resolved
-                    self.send_ack(
-                        packet.session_id,
-                        fragment.fragment_index,
-                        &packet.routing_header,
-                    );
+                } else {
+                    // Neighbor not found in packet_send, send Nack
+                    self.send_nack(packet, Nack::ErrorInRouting(next_hop), allow_optimized);
                 }
+                
+                
             }
             PacketType::Ack(_) | PacketType::Nack(_) | PacketType::FloodResponse(_) => {
                 // Forward these packets without dropping
@@ -147,7 +169,7 @@ impl RustBustersDrone {
             return;
         }
 
-        let path_to_client = &packet_routing_header.hops[0..hop_index];
+        let path_to_client = &packet_routing_header.hops[0..=hop_index];
         let reversed_path: Vec<NodeId> = path_to_client.iter().rev().cloned().collect();
 
         let hops = if self.optimized_routing {
@@ -160,17 +182,22 @@ impl RustBustersDrone {
 
         let ack_packet = Packet {
             pack_type: PacketType::Ack(ack),
-            routing_header: SourceRoutingHeader { hop_index: 0, hops },
+            routing_header: SourceRoutingHeader { hop_index: 1, hops },
             session_id,
         };
 
-        let next_hop = ack_packet.routing_header.hops[0];
-
+        let next_hop = ack_packet.routing_header.hops[1];
+        
         if let Some(next_sender) = self.packet_send.get(&next_hop) {
             if let Err(e) = next_sender.send(ack_packet) {
                 eprintln!("Error sending Ack to {}: {}", next_hop, e);
+                self.packet_send.remove(&next_hop);
+                eprintln!(
+                    "Neighbor {} has been removed from packet_send due to channel closure",
+                    next_hop
+                );
             }
-        } else {
+        } else { // TODO: to handle loss of undroppable packets
             eprintln!("Cannot send Ack, next hop {} is not a neighbor", next_hop);
         }
     }
@@ -191,7 +218,7 @@ impl RustBustersDrone {
             reversed_path
         };
 
-        let source_routing_header = SourceRoutingHeader { hop_index: 0, hops };
+        let source_routing_header = SourceRoutingHeader { hop_index: 1, hops };
 
         let nack_packet = Packet {
             pack_type: PacketType::Nack(nack),
@@ -199,13 +226,19 @@ impl RustBustersDrone {
             session_id: packet.session_id,
         };
 
-        let next_hop = nack_packet.routing_header.hops[0];
+        let next_hop = nack_packet.routing_header.hops[1];
 
         if let Some(next_sender) = self.packet_send.get(&next_hop) {
             if let Err(e) = next_sender.send(nack_packet) {
                 eprintln!("Error sending Nack to {}: {}", next_hop, e);
+                // Remove the neighbor from packet_send
+                self.packet_send.remove(&next_hop);
+                eprintln!(
+                    "Neighbor {} has been removed from packet_send due to channel closure",
+                    next_hop
+                );
             }
-        } else {
+        } else { // TODO: to handle loss of undroppable packets
             eprintln!("Cannot send Nack, next hop {} is not a neighbor", next_hop);
         }
     }
@@ -264,12 +297,18 @@ impl RustBustersDrone {
                             pack_type: PacketType::FloodRequest(flood_request.clone()),
                             routing_header: SourceRoutingHeader {
                                 hop_index: 1,
-                                hops: vec![self.id, neighbor_id], // TODO: non dovrebbe essere necessario questo vector
+                                hops: vec![self.id, neighbor_id],
                             },
                             session_id: packet.session_id,
                         };
                         if let Err(e) = neighbor_sender.send(packet) {
                             eprintln!("Error sending FloodRequest to {}: {}", neighbor_id, e);
+                            // Remove the neighbor from packet_send
+                            // self.packet_send.remove(&neighbor_id); // TODO: handle removal of neighbors
+                            eprintln!(
+                                "Neighbor {} has been removed from packet_send due to channel closure",
+                                neighbor_id
+                            );
                         }
                     }
                 }
@@ -281,9 +320,16 @@ impl RustBustersDrone {
         match command {
             DroneCommand::Crash => {
                 // Terminate the drone's thread
-                std::process::exit(0);
+                std::process::exit(0); // TODO: handle this more gracefully
             }
-            DroneCommand::AddSender(_, _) | DroneCommand::SetPacketDropRate(_) => todo!(),
+            DroneCommand::AddSender(node_id, sender) => {
+                self.packet_send.insert(node_id, sender);
+                eprintln!("Drone {} added sender for node_id {}", self.id, node_id);
+            }
+            DroneCommand::SetPacketDropRate(new_pdr) => {
+                self.pdr = (new_pdr * 100.0) as u8;
+                eprintln!("Drone {} set Packet Drop Rate to {}%", self.id, self.pdr);
+            }
         }
     }
 }
