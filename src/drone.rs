@@ -30,7 +30,7 @@ impl Drone for RustBustersDrone {
             pdr: (options.pdr * 100.0) as u8,
             packet_send: options.packet_send,
             received_floods: HashSet::new(),
-            optimized_routing: true,
+            optimized_routing: false,
             running: true,
         }
     }
@@ -310,7 +310,7 @@ impl RustBustersDrone {
             );
         }
     }
-
+    // FIXME: Correggere la funzione, accettando il vettore dritto (non rev) e aggiungendo il mittente
     fn optimize_route(&self, path: &[NodeId]) -> Vec<NodeId> {
         debug!("Drone {}: Optimizing route {:?}", self.id, path);
         for (index, &node_id) in path.iter().enumerate() {
@@ -446,5 +446,10 @@ impl RustBustersDrone {
                 info!("Drone {}: Set Packet Drop Rate to {}%", self.id, self.pdr);
             }
         }
+    }
+    
+    fn set_optimized_routing(&mut self, optimized_routing: bool) {
+        self.optimized_routing = optimized_routing;
+        info!("Drone {}: Set optimized routing to {}", self.id, optimized_routing);
     }
 }
