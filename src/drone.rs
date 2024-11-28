@@ -370,7 +370,7 @@ impl RustBustersDrone {
                 let response_packet = Packet {
                     pack_type: PacketType::FloodResponse(response),
                     routing_header: SourceRoutingHeader {
-                        hop_index: 0,
+                        hop_index: 1,
                         hops: flood_request
                             .path_trace
                             .iter()
