@@ -79,8 +79,8 @@ impl RustBustersDrone {
         // Step 1: Check if hops[hop_index] matches self.id
         if packet.routing_header.hops[hop_index] != self.id {
             warn!(
-                "Drone {}: Unexpected recipient. Expected {}, got {}, PacketType: {:?}",
-                self.id, packet.routing_header.hops[hop_index], self.id, packet.pack_type
+                "Drone {}: Unexpected recipient. Expected {}, got {}, Packet: {:#?}",
+                self.id, packet.routing_header.hops[hop_index], self.id, packet
             );
             self.send_nack(packet, Nack::UnexpectedRecipient(self.id), allow_optimized);
             return;
