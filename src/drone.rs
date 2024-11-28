@@ -1,7 +1,7 @@
 use crossbeam_channel::{select, Receiver, Sender};
+use log::{debug, error, info, warn}; // Import logging macros
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
-use log::{debug, error, info, warn};  // Import logging macros
 use wg_2024::controller::{DroneCommand, NodeEvent};
 use wg_2024::drone::{Drone, DroneOptions};
 use wg_2024::network::{NodeId, SourceRoutingHeader};
@@ -99,7 +99,10 @@ impl RustBustersDrone {
         // Step 4: Identify next hop and check if it's a neighbor
         let next_hop = packet.routing_header.hops[next_hop_index];
         if !self.packet_send.contains_key(&next_hop) {
-            warn!("Drone {}: Next hop {} is not a neighbor.", self.id, next_hop);
+            warn!(
+                "Drone {}: Next hop {} is not a neighbor.",
+                self.id, next_hop
+            );
             self.send_nack(packet, Nack::ErrorInRouting(next_hop), allow_optimized);
             return;
         }
@@ -128,7 +131,10 @@ impl RustBustersDrone {
                         .controller_send
                         .send(NodeEvent::PacketDropped(packet.clone()))
                     {
-                        error!("Drone {}: Error sending PacketDropped event: {}", self.id, e);
+                        error!(
+                            "Drone {}: Error sending PacketDropped event: {}",
+                            self.id, e
+                        );
                     }
                     return;
                 }
@@ -310,19 +316,30 @@ impl RustBustersDrone {
             );
         }
     }
-    // FIXME: Correggere la funzione, accettando il vettore dritto (non rev) e aggiungendo il mittente
     fn optimize_route(&self, path: &[NodeId]) -> Vec<NodeId> {
         debug!("Drone {}: Optimizing route {:?}", self.id, path);
-        for (index, &node_id) in path.iter().enumerate() {
-            if self.packet_send.contains_key(&node_id) {
-                let optimized_path = path[index..].to_vec();
-                debug!("Drone {}: Optimized route {:?}", self.id, optimized_path);
-                return optimized_path;
-            }
+
+        if let Some((index, &last_nearby_node)) = path
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|&(_, &node_id)| self.packet_send.contains_key(&node_id))
+        {
+            let mut optimized_path = path[index..].to_vec();
+
+            optimized_path.insert(0, last_nearby_node);
+
+            debug!("Drone {}: Optimized route {:?}", self.id, optimized_path);
+            return optimized_path;
         }
+
+        debug!(
+            "Drone {}: No optimization possible, returning original path",
+            self.id
+        );
         path.to_vec()
     }
-
+    
     fn handle_flood(&mut self, packet: Packet) {
         debug!("Drone {}: Handling FloodRequest", self.id);
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
@@ -365,8 +382,8 @@ impl RustBustersDrone {
                 if let Some(sender) = self.packet_send.get(&sender_id).cloned() {
                     if let Err(e) = sender.send(response_packet) {
                         error!(
-                            "Drone {}: Error sending FloodResponse to {}: {}",
-                            self.id, sender_id, e
+                            "Drone {}: Error sending FloodResponse({}) to {}: {}",
+                            self.id, flood_request.flood_id, sender_id, e
                         );
                         self.packet_send.remove(&sender_id);
                         warn!(
@@ -374,7 +391,10 @@ impl RustBustersDrone {
                             self.id, sender_id
                         );
                     } else {
-                        info!("Drone {}: FloodResponse sent to {}", self.id, sender_id);
+                        info!(
+                            "Drone {}: FloodResponse({}) sent to {}",
+                            self.id, flood_request.flood_id, sender_id
+                        );
                     }
                 } else {
                     warn!(
@@ -408,8 +428,8 @@ impl RustBustersDrone {
                     };
                     if let Err(e) = neighbor_sender.send(packet) {
                         error!(
-                            "Drone {}: Error sending FloodRequest to {}: {}",
-                            self.id, neighbor_id, e
+                            "Drone {}: Error sending FloodRequest({}) to {}: {}",
+                            self.id, flood_request.flood_id, neighbor_id, e
                         );
                         // Remove the neighbor from packet_send
                         self.packet_send.remove(&neighbor_id);
@@ -418,7 +438,10 @@ impl RustBustersDrone {
                             self.id, neighbor_id
                         );
                     } else {
-                        info!("Drone {}: FloodRequest forwarded to {}", self.id, neighbor_id);
+                        info!(
+                            "Drone {}: FloodRequest({}) forwarded to {}",
+                            self.id, flood_request.flood_id, neighbor_id
+                        );
                     }
                 }
             }
@@ -447,9 +470,12 @@ impl RustBustersDrone {
             }
         }
     }
-    
+
     fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
-        info!("Drone {}: Set optimized routing to {}", self.id, optimized_routing);
+        info!(
+            "Drone {}: Set optimized routing to {}",
+            self.id, optimized_routing
+        );
     }
 }
