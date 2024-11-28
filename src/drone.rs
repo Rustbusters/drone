@@ -1,5 +1,6 @@
 use crossbeam_channel::{select, Receiver, Sender};
-use log::{debug, error, info, warn}; // Import logging macros
+use log::{debug, error, info, warn};
+// Import logging macros
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
 use wg_2024::controller::{DroneCommand, NodeEvent};
@@ -78,8 +79,8 @@ impl RustBustersDrone {
         // Step 1: Check if hops[hop_index] matches self.id
         if packet.routing_header.hops[hop_index] != self.id {
             warn!(
-                "Drone {}: Unexpected recipient. Expected {}, got {}",
-                self.id, packet.routing_header.hops[hop_index], self.id
+                "Drone {}: Unexpected recipient. Expected {}, got {}, PacketType: {:?}",
+                self.id, packet.routing_header.hops[hop_index], self.id, packet.pack_type
             );
             self.send_nack(packet, Nack::UnexpectedRecipient(self.id), allow_optimized);
             return;
@@ -339,7 +340,7 @@ impl RustBustersDrone {
         );
         path.to_vec()
     }
-    
+
     fn handle_flood(&mut self, packet: Packet) {
         debug!("Drone {}: Handling FloodRequest", self.id);
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
