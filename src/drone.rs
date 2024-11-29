@@ -290,6 +290,11 @@ impl RustBustersDrone {
         debug!("Drone {}: Sending Nack: {:?}", self.id, nack);
         let hop_index = packet.routing_header.hop_index;
 
+        if hop_index == 0 {
+            error!("Drone {}: Error: hop_index is 0 in send_nack", self.id);
+            return;
+        }
+
         let path_to_sender = &packet.routing_header.hops[0..=hop_index];
         let reversed_path = path_to_sender
             .iter()
@@ -387,7 +392,7 @@ impl RustBustersDrone {
                 let response_packet = Packet {
                     pack_type: PacketType::FloodResponse(response),
                     routing_header: SourceRoutingHeader {
-                        hop_index: 0,
+                        hop_index: 1,
                         hops: flood_request
                             .path_trace
                             .iter()
