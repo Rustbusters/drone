@@ -177,7 +177,7 @@ impl RustBustersDrone {
                         {
                             error!("Drone {}: Error sending PacketSent event: {}", self.id, e);
                         }
-                        // Send Ack to client
+                        // Send Ack to client TODO: remove this
                         self.send_ack(
                             packet.session_id,
                             fragment.fragment_index,
@@ -238,7 +238,7 @@ impl RustBustersDrone {
             "Drone {}: Sending Ack for fragment {}",
             self.id, fragment_index
         );
-        let hop_index = packet_routing_header.hop_index;
+        let hop_index = packet_routing_header.hop_index-1; // hop_index: actual drone
 
         if hop_index == 0 {
             error!("Drone {}: Error: hop_index is 0 in send_ack", self.id);
@@ -283,12 +283,13 @@ impl RustBustersDrone {
                 "Drone {}: Cannot send Ack, next hop {} is not a neighbor",
                 self.id, next_hop
             );
+            trace!("Drone {}: Ack packet: {:?}", self.id, ack_packet);
         }
     }
 
     fn send_nack(&mut self, packet: Packet, nack: Nack, allow_optimized: bool) {
         debug!("Drone {}: Sending Nack: {:?}", self.id, nack);
-        let hop_index = packet.routing_header.hop_index;
+        let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone
 
         if hop_index == 0 {
             error!("Drone {}: Error: hop_index is 0 in send_nack", self.id);
@@ -337,6 +338,7 @@ impl RustBustersDrone {
                 "Drone {}: Cannot send Nack, next hop {} is not a neighbor",
                 self.id, next_hop
             );
+            trace!("Drone {}: Nack packet: {:?}", self.id, nack_packet);
         }
     }
     fn optimize_route(&self, path: &[NodeId]) -> Vec<NodeId> {
@@ -495,7 +497,7 @@ impl RustBustersDrone {
     }
 
     #[allow(dead_code)]
-    fn set_optimized_routing(&mut self, optimized_routing: bool) {
+    pub fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
         debug!(
             "Drone {}: Set optimized routing to {}",
