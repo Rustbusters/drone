@@ -10,8 +10,8 @@ use log::{debug, info, trace, warn};
 use std::collections::{HashMap, HashSet};
 use wg_2024::controller::{DroneCommand, NodeEvent};
 use wg_2024::drone::{Drone, DroneOptions};
-use wg_2024::network::NodeId;
-use wg_2024::packet::{Packet, PacketType};
+use wg_2024::network::{NodeId, SourceRoutingHeader};
+use wg_2024::packet::{Nack, NackType, Packet, PacketType};
 
 pub struct RustBustersDrone {
     id: NodeId,
@@ -85,5 +85,17 @@ impl RustBustersDrone {
             "Drone {}: Set optimized routing to {}",
             self.id, optimized_routing
         );
+    }
+
+    pub fn kill_drone(&self, target_drone_id: NodeId) {
+        // Construct the kill_packet
+        let kill_packet = Packet {
+            pack_type: PacketType::Nack(Nack { fragment_index: 0, nack_type: NackType::DestinationIsDrone }),
+            routing_header: SourceRoutingHeader { hop_index: 0, hops: vec![] },
+            session_id: 0
+        };
+        let kill_node_event = NodeEvent::PacketDropped(kill_packet);
+        // Send kill to SC with target_drone_id
+        self.controller_send.send(kill_node_event).expect("Error in sending Kill Packet");
     }
 }
