@@ -1,10 +1,11 @@
 pub mod forward_packet;
 pub mod handle_command;
 pub mod handle_flood;
+mod hunt;
 pub mod optimize_route;
 pub mod send_ack;
 pub mod send_nack;
-mod hunt;
+mod test;
 
 use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};
@@ -26,7 +27,7 @@ pub struct RustBustersDrone {
     received_floods: HashSet<u64>,
     optimized_routing: bool,
     running: bool,
-    shot_range: ShotRange
+    shot_range: ShotRange,
 }
 
 impl Drone for RustBustersDrone {
@@ -82,7 +83,6 @@ impl Drone for RustBustersDrone {
 }
 
 impl RustBustersDrone {
-    
     #[allow(dead_code)]
     pub fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
