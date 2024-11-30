@@ -42,7 +42,7 @@ impl Drone for RustBustersDrone {
             received_floods: HashSet::new(),
             optimized_routing: false,
             running: true,
-            hunt_range: 1 // default to 1, TODO: can be set by the SC
+            shot_range: 0, // TODO: set by SC
         }
     }
 

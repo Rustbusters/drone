@@ -1,7 +1,7 @@
 use wg_2024::controller::NodeEvent;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
-use crate::drone::{Range, ShotRange};
+use crate::drone::{ShotRange};
 use crate::RustBustersDrone;
 
 
@@ -12,10 +12,6 @@ pub enum HuntMode {
 }
 
 impl RustBustersDrone {
-    pub fn get_shot_range(&self) -> ShotRange {
-        self.shot_range
-    }
-
     pub fn hunt_ghost(&self, hunt_mode: HuntMode, target_drone_id: Option<NodeId>) -> Result<(), String> {
         // Construct the hunt_packet in disguise
         // You can recognize the packet for the length: 0
@@ -57,6 +53,8 @@ impl RustBustersDrone {
 
         // Step 3: send the packet to the SC
         self.controller_send.send(kill_node_event).expect("Error in sending Kill Packet");
+
+        Ok(())
     }
 
     pub fn set_normal_shot_data(data: &mut [u8; 80], target_drone_id: NodeId) {
@@ -65,11 +63,11 @@ impl RustBustersDrone {
     }
 
     pub fn set_long_shot_data(data: &mut [u8; 80], shot_range: ShotRange) {
-        data[0] = 'l' as u8;
+        data[0] = 'l' as u8; // encoding of long shot
         data[1] = shot_range;
     }
 
     pub fn set_emp_blast_data(data: &mut [u8; 80]) {
-        data[0] = 'e' as u8;
+        data[0] = 'e' as u8; // encoding of emp blast
     }
 }
