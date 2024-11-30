@@ -4,6 +4,7 @@ pub mod handle_flood;
 pub mod optimize_route;
 pub mod send_ack;
 pub mod send_nack;
+mod hunt;
 
 use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};
@@ -12,6 +13,8 @@ use wg_2024::controller::{DroneCommand, NodeEvent};
 use wg_2024::drone::{Drone, DroneOptions};
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, NackType, Packet, PacketType};
+
+pub type ShotRange = u8;
 
 pub struct RustBustersDrone {
     id: NodeId,
@@ -23,6 +26,7 @@ pub struct RustBustersDrone {
     received_floods: HashSet<u64>,
     optimized_routing: bool,
     running: bool,
+    shot_range: ShotRange
 }
 
 impl Drone for RustBustersDrone {
@@ -38,6 +42,7 @@ impl Drone for RustBustersDrone {
             received_floods: HashSet::new(),
             optimized_routing: false,
             running: true,
+            hunt_range: 1 // default to 1, TODO: can be set by the SC
         }
     }
 
@@ -85,17 +90,5 @@ impl RustBustersDrone {
             "Drone {}: Set optimized routing to {}",
             self.id, optimized_routing
         );
-    }
-
-    pub fn kill_drone(&self, target_drone_id: NodeId) {
-        // Construct the kill_packet
-        let kill_packet = Packet {
-            pack_type: PacketType::Nack(Nack { fragment_index: 0, nack_type: NackType::DestinationIsDrone }),
-            routing_header: SourceRoutingHeader { hop_index: 0, hops: vec![] },
-            session_id: 0
-        };
-        let kill_node_event = NodeEvent::PacketDropped(kill_packet);
-        // Send kill to SC with target_drone_id
-        self.controller_send.send(kill_node_event).expect("Error in sending Kill Packet");
     }
 }
