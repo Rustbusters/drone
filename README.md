@@ -42,9 +42,28 @@ This is the basic idea of how it works:
    - If the network isn't partitioned after the `hunt`, then a `Crash` command is sent to the ghost drone.
    - Otherwise, the command is canceled and the `hunt` initiator is notified.
 
+#### Encoding
+This feature of the drone uses the same `Packet` structure as specified in the protocol standard.\
+The only thing that changes is the encoding. The `HuntPacket` looks like this:
+
+```rust
+Packet {
+   pack_type: PacketType::MsgFragment(Fragment {
+      fragment_index: 0,
+      total_n_fragments: 0,
+      length: 0,
+      data: data_for_specific_mode // changes based on the mode you choose (NormalShot, LongShot or EMPBlast)
+   }),
+   routing_header: SourceRoutingHeader { hop_index: 0, hops: vec![] },
+   session_id: 0,
+}
+```
+It is then put inside a `PacketSent` `NodeEvent`.
+
 ## Configurable Options
 - **Node ID**: Unique identifier for the drone.
 - **Packet Drop Rate (PDR)**: Probability of dropping packets (0-100%).
 - **Optimized Routing**: Toggle for enabling route optimization.
+- **Shot Range**: Adjusts the max range for the drone to shoot.
 
 This drone is part of the `RustBusters` project and integrates seamlessly into the `wg_2024` simulation framework for distributed network experiments.
