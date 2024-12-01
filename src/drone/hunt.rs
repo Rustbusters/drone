@@ -3,8 +3,6 @@ use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
 use crate::drone::{ShotRange};
 use crate::RustBustersDrone;
-
-
 pub enum HuntMode {
     NormalShot(NodeId),
     LongShot(ShotRange),
@@ -38,7 +36,7 @@ impl RustBustersDrone {
         let kill_node_event = NodeEvent::PacketSent(hunt_packet);
 
         // Step 3: send the packet to the SC
-        self.controller_send.send(kill_node_event).expect("Error in sending Kill Packet");
+        self.controller_send.send(kill_node_event).expect("Error in sending Hunt Packet");
 
         Ok(())
     }

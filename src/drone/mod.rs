@@ -1,7 +1,7 @@
 pub mod forward_packet;
 pub mod handle_command;
 pub mod handle_flood;
-mod hunt;
+pub mod hunt;
 pub mod optimize_route;
 pub mod send_ack;
 pub mod send_nack;
