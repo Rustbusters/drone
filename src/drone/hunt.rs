@@ -6,36 +6,22 @@ use crate::RustBustersDrone;
 
 
 pub enum HuntMode {
-    NormalShot,
+    NormalShot(NodeId),
     LongShot(ShotRange),
     EMPBlast
 }
 
 impl RustBustersDrone {
-    pub fn hunt_ghost(&self, hunt_mode: HuntMode, target_drone_id: Option<NodeId>) -> Result<(), String> {
+    pub fn hunt_ghost(&self, hunt_mode: HuntMode) -> Result<(), String> {
         // Construct the hunt_packet in disguise
         // You can recognize the packet for the length: 0
 
         // Step 1: construct the data:
-        // - NormalShot encoded as 'n'
-        // - LongShot encoded as 'l' followed by the provided range '<range>'
+        // - NormalShot encoded as 'n' followed by the provided target_node_id
+        // - LongShot encoded as 'l' followed by the provided shot_range
         // - EMPBlast encoded as 'e'
         let mut data = [0; 80];
-        match hunt_mode {
-            HuntMode::NormalShot => {
-                if let Some(target_drone_id) = target_drone_id {
-                    RustBustersDrone::set_normal_shot_data(&mut data, target_drone_id);
-                } else {
-                    return Err("Error: no target_drone_id specified".to_string());
-                }
-            },
-            HuntMode::LongShot(shot_range) => {
-                RustBustersDrone::set_long_shot_data(&mut data, shot_range);
-            },
-            HuntMode::EMPBlast => {
-                RustBustersDrone::set_emp_blast_data(&mut data);
-            },
-        }
+        self.set_data(&mut data, hunt_mode);
 
         // Step 2: construct the packet with the specified data
         let hunt_packet = Packet {
@@ -57,17 +43,25 @@ impl RustBustersDrone {
         Ok(())
     }
 
-    pub fn set_normal_shot_data(data: &mut [u8; 80], target_drone_id: NodeId) {
+    pub fn set_data(&self, data: &mut [u8; 80], hunt_mode: HuntMode) {
+        match hunt_mode {
+            HuntMode::NormalShot(target_drone_id) => RustBustersDrone::set_normal_shot_data(data, target_drone_id),
+            HuntMode::LongShot(shot_range) => RustBustersDrone::set_long_shot_data(data, shot_range),
+            HuntMode::EMPBlast => RustBustersDrone::set_emp_blast_data(data)
+        }
+    }
+    
+    fn set_normal_shot_data(data: &mut [u8; 80], target_drone_id: NodeId) {
         data[0] = 'n' as u8; // encoding of normal shot
         data[1] = target_drone_id;
     }
 
-    pub fn set_long_shot_data(data: &mut [u8; 80], shot_range: ShotRange) {
+    fn set_long_shot_data(data: &mut [u8; 80], shot_range: ShotRange) {
         data[0] = 'l' as u8; // encoding of long shot
         data[1] = shot_range;
     }
 
-    pub fn set_emp_blast_data(data: &mut [u8; 80]) {
+    fn set_emp_blast_data(data: &mut [u8; 80]) {
         data[0] = 'e' as u8; // encoding of emp blast
     }
 }
