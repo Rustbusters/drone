@@ -4,7 +4,7 @@ mod tests {
     use crossbeam_channel::unbounded;
     use std::collections::{HashMap, HashSet};
     use wg_2024::network::SourceRoutingHeader;
-    use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
+    use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType, FRAGMENT_DSIZE};
 
     fn setup_drone_with_channels() -> RustBustersDrone {
         let id = 1; // ID del drone
@@ -37,8 +37,8 @@ mod tests {
             pack_type: PacketType::MsgFragment(Fragment {
                 fragment_index: 0,
                 total_n_fragments: 1,
-                data: [0; 80],
-                length: 80,
+                data: [0; FRAGMENT_DSIZE],
+                length: FRAGMENT_DSIZE as u8,
             }),
             routing_header: SourceRoutingHeader { hop_index: 3, hops },
             session_id: 123,
