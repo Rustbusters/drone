@@ -10,7 +10,7 @@ use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};
 use std::collections::{HashMap, HashSet};
 use wg_2024::controller::{DroneCommand, NodeEvent};
-use wg_2024::drone::{Drone, DroneOptions};
+use wg_2024::drone::{Drone};
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, NackType, Packet, PacketType};
 
@@ -30,15 +30,22 @@ pub struct RustBustersDrone {
 }
 
 impl Drone for RustBustersDrone {
-    fn new(options: DroneOptions) -> Self {
-        info!("Initializing drone with ID {}", options.id);
+    fn new(
+        id: NodeId,
+        controller_send: Sender<NodeEvent>,
+        controller_recv: Receiver<DroneCommand>,
+        packet_recv: Receiver<Packet>,
+        packet_send: HashMap<NodeId, Sender<Packet>>,
+        pdr: f32, // Packet Drop Rate in percentage (0-100)
+    ) -> Self {
+        info!("Initializing drone with ID {}", id);
         Self {
-            id: options.id,
-            controller_send: options.controller_send,
-            controller_recv: options.controller_recv,
-            packet_recv: options.packet_recv,
-            pdr: (options.pdr * 100.0) as u8,
-            packet_send: options.packet_send,
+            id,
+            controller_send,
+            controller_recv,
+            packet_recv,
+            pdr: (pdr * 100.0) as u8,
+            packet_send,
             received_floods: HashSet::new(),
             optimized_routing: false,
             running: true,

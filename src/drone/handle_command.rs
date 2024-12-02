@@ -18,6 +18,10 @@ impl RustBustersDrone {
                 self.pdr = ((new_pdr * 100.0).round() as u8).clamp(0, 100);
                 info!("Drone {}: Set Packet Drop Rate to {}%", self.id, self.pdr);
             }
+            DroneCommand::RemoveSender(node_id) => {
+                self.packet_send.remove(&node_id);
+                info!("Drone {}: Removed sender for node_id {}", self.id, node_id);
+            }
         }
     }
 }
