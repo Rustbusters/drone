@@ -5,10 +5,13 @@ pub mod hunt;
 pub mod optimize_route;
 pub mod send_ack;
 pub mod send_nack;
+mod sounds;
 mod test;
 
+use crate::drone::sounds::{DROP_SOUND, SPAWN_SOUND};
 use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};
+use rodio::{OutputStream, OutputStreamHandle, Sink};
 use std::collections::{HashMap, HashSet};
 use wg_2024::controller::{DroneCommand, NodeEvent};
 use wg_2024::drone::{Drone, DroneOptions};
@@ -28,6 +31,7 @@ pub struct RustBustersDrone {
     optimized_routing: bool,
     running: bool,
     shot_range: ShotRange,
+    sound_sys: Option<(OutputStream, OutputStreamHandle)>,
 }
 
 impl Drone for RustBustersDrone {
@@ -44,11 +48,18 @@ impl Drone for RustBustersDrone {
             optimized_routing: false,
             running: true,
             shot_range: 0, // TODO: set by SC
+            sound_sys: if let Ok((stream, handle)) = OutputStream::try_default() {
+                Some((stream, handle))
+            } else {
+                println!("Error initializing audio system. Sound effects will be disabled.");
+                None
+            },
         }
     }
 
     fn run(&mut self) {
         info!("Drone {} starting to run.", self.id);
+        self.play_sound(SPAWN_SOUND);
         while self.running {
             select_biased! {
                 recv(self.controller_recv) -> command_res => {

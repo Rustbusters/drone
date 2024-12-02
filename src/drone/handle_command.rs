@@ -1,5 +1,7 @@
 use super::RustBustersDrone;
+use crate::drone::sounds::CRASH_SOUND;
 use log::info;
+use std::thread;
 use wg_2024::controller::DroneCommand;
 
 impl RustBustersDrone {
@@ -8,6 +10,8 @@ impl RustBustersDrone {
         match command {
             DroneCommand::Crash => {
                 info!("Drone {}: Received Crash command. Shutting down.", self.id);
+                self.play_sound(CRASH_SOUND);
+                println!("Drone {}: Shutting down.", self.id);
                 self.running = false;
             }
             DroneCommand::AddSender(node_id, sender) => {
@@ -15,6 +19,8 @@ impl RustBustersDrone {
                 info!("Drone {}: Added sender for node_id {}", self.id, node_id);
             }
             DroneCommand::SetPacketDropRate(new_pdr) => {
+                self.play_sound(CRASH_SOUND);
+
                 self.pdr = ((new_pdr * 100.0).round() as u8).clamp(0, 100);
                 info!("Drone {}: Set Packet Drop Rate to {}%", self.id, self.pdr);
             }

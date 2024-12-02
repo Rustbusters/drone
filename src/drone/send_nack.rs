@@ -1,4 +1,5 @@
 use super::RustBustersDrone;
+use crate::drone::sounds::NACK_SOUND;
 use log::{debug, error, info, trace, warn};
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, Packet, PacketType};
@@ -6,6 +7,7 @@ use wg_2024::packet::{Nack, Packet, PacketType};
 impl RustBustersDrone {
     pub fn send_nack(&mut self, packet: Packet, nack: Nack, allow_optimized: bool) {
         debug!("Drone {}: Sending Nack: {:?}", self.id, nack);
+        self.play_sound(NACK_SOUND);
         let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone
 
         if hop_index == 0 {

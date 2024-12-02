@@ -1,4 +1,5 @@
 use super::RustBustersDrone;
+use crate::drone::sounds::DROP_SOUND;
 use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::NodeEvent;
@@ -77,6 +78,7 @@ impl RustBustersDrone {
                         "Drone {}: Dropping packet due to PDR. Fragment index: {}",
                         self.id, fragment.fragment_index
                     );
+                    self.play_sound(DROP_SOUND);
                     self.send_nack(
                         packet.clone(),
                         Nack {

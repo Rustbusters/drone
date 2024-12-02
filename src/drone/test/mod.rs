@@ -3,6 +3,7 @@ mod tests {
     use crate::RustBustersDrone;
     use crossbeam_channel::unbounded;
     use std::collections::{HashMap, HashSet};
+    use wg_2024::drone::Drone;
     use wg_2024::network::SourceRoutingHeader;
     use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
 
@@ -25,6 +26,7 @@ mod tests {
             optimized_routing: false,
             running: false,
             shot_range: 0,
+            sound_sys: None,
         }
     }
 
