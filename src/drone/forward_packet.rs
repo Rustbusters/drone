@@ -128,12 +128,6 @@ impl RustBustersDrone {
                         {
                             error!("Drone {}: Error sending PacketSent event: {}", self.id, e);
                         }
-                        // Send Ack to client TODO: remove this
-                        self.send_ack(
-                            packet.session_id,
-                            fragment.fragment_index,
-                            &packet.routing_header,
-                        );
                     }
                 } else {
                     warn!(
