@@ -1,6 +1,6 @@
 use crate::drone::ShotRange;
 use crate::RustBustersDrone;
-use wg_2024::controller::NodeEvent;
+use wg_2024::controller::DroneEvent;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Fragment, Packet, PacketType, FRAGMENT_DSIZE};
 pub enum HuntMode {
@@ -35,8 +35,8 @@ impl RustBustersDrone {
             },
             session_id: 0,
         };
-        // Create NodeEvent
-        let kill_node_event = NodeEvent::PacketSent(hunt_packet);
+        // Create DroneEvent
+        let kill_node_event = DroneEvent::PacketSent(hunt_packet);
 
         // Step 3: send the packet to the SC
         self.controller_send

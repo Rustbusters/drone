@@ -1,7 +1,7 @@
 use super::RustBustersDrone;
 use log::{error, info, trace, warn};
 use rand::Rng;
-use wg_2024::controller::NodeEvent;
+use wg_2024::controller::DroneEvent;
 use wg_2024::packet::{Nack, NackType, Packet, PacketType};
 
 impl RustBustersDrone {
@@ -88,7 +88,7 @@ impl RustBustersDrone {
                     // Send PacketDropped event to the controller
                     if let Err(e) = self
                         .controller_send
-                        .send(NodeEvent::PacketDropped(packet.clone()))
+                        .send(DroneEvent::PacketDropped(packet.clone()))
                     {
                         error!(
                             "Drone {}: Error sending PacketDropped event: {}",
@@ -124,7 +124,7 @@ impl RustBustersDrone {
                         // Send PacketSent event to the controller
                         if let Err(e) = self
                             .controller_send
-                            .send(NodeEvent::PacketSent(packet.clone()))
+                            .send(DroneEvent::PacketSent(packet.clone()))
                         {
                             error!("Drone {}: Error sending PacketSent event: {}", self.id, e);
                         }
