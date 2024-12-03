@@ -11,6 +11,7 @@ impl RustBustersDrone {
             DroneCommand::Crash => {
                 info!("Drone {}: Received Crash command. Shutting down.", self.id);
                 self.play_sound(CRASH_SOUND);
+                thread::sleep(std::time::Duration::from_millis(500));
                 println!("Drone {}: Shutting down.", self.id);
                 self.running = false;
             }
