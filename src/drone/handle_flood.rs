@@ -5,7 +5,7 @@ use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{FloodResponse, NodeType, Packet, PacketType};
 
 impl RustBustersDrone {
-    pub fn handle_flood(&mut self, packet: Packet) {
+    pub fn handle_flood_request(&mut self, packet: Packet) {
         debug!("Drone {}: Handling FloodRequest", self.id);
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
             let sender_id = if let Some(&(last_node_id, _)) = flood_request.path_trace.last() {

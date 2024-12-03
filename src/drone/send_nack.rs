@@ -4,6 +4,12 @@ use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, Packet, PacketType};
 
 impl RustBustersDrone {
+    /// Send a Nack packet to the sender of the given packet
+    ///
+    /// #### Arguments
+    /// - `packet`: The packet for which the Nack is being sent
+    /// - `nack`: The Nack to be sent
+    /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn send_nack(&mut self, packet: Packet, nack: Nack, allow_optimized: bool) {
         debug!("Drone {}: Sending Nack: {:?}", self.id, nack);
         let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone

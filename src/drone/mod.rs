@@ -30,13 +30,29 @@ pub struct RustBustersDrone {
 }
 
 impl Drone for RustBustersDrone {
+    /// Creates a new drone with the given parameters
+    /// #### Arguments
+    /// - `id`: The ID of the drone
+    /// - `controller_send`: The sender to send events to the controller
+    /// - `controller_recv`: The receiver to receive commands from the controller
+    /// - `packet_recv`: The receiver to receive packets from the network
+    /// - `packet_send`: The map of node IDs to senders to send packets to the network
+    /// - `pdr`: The Packet Drop Rate in percentage (0-100)
+    ///
+    /// #### Returns
+    /// A new instance of `RustBustersDrone`
+    ///
+    /// > Note:
+    /// > - The `running` field is set to `true` by default
+    /// > - The `optimized_routing` field is set to `false` by default
+    /// > - The `shot_range` field is set to `0` by default
     fn new(
         id: NodeId,
         controller_send: Sender<DroneEvent>,
         controller_recv: Receiver<DroneCommand>,
         packet_recv: Receiver<Packet>,
         packet_send: HashMap<NodeId, Sender<Packet>>,
-        pdr: f32, // Packet Drop Rate in percentage (0-100)
+        pdr: f32,
     ) -> Self {
         info!("Initializing drone with ID {}", id);
         Self {
@@ -53,6 +69,7 @@ impl Drone for RustBustersDrone {
         }
     }
 
+    /// Runs the drone
     fn run(&mut self) {
         info!("Drone {} starting to run.", self.id);
         while self.running {
@@ -73,7 +90,7 @@ impl Drone for RustBustersDrone {
                         Ok(packet) => {
                             trace!("Drone {} received packet: {:?}", self.id, packet);
                             match packet.pack_type {
-                                PacketType::FloodRequest(_) => self.handle_flood(packet),
+                                PacketType::FloodRequest(_) => self.handle_flood_request(packet),
                                 _ => self.forward_packet(packet, true),
                             }
                         }
@@ -90,6 +107,9 @@ impl Drone for RustBustersDrone {
 
 impl RustBustersDrone {
     #[allow(dead_code)]
+    /// Sets the `optimized_routing` field to the given value
+    /// #### Arguments
+    /// - `optimized_routing`: The value to set the `optimized_routing` field to
     pub fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
         debug!(

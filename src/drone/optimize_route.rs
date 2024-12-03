@@ -3,6 +3,13 @@ use log::debug;
 use wg_2024::network::NodeId;
 
 impl RustBustersDrone {
+    /// Optimize the route when possible if it finds a shorter path to the destination
+    ///
+    /// #### Arguments
+    /// - `path`: The path to optimize
+    ///
+    /// #### Returns
+    /// The optimized path
     pub fn optimize_route(&self, path: &[NodeId]) -> Vec<NodeId> {
         // FIXME: from [1, 5] to [5, 5]
         debug!("Drone {}: Optimizing route {:?}", self.id, path);

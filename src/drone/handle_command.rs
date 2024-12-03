@@ -3,6 +3,16 @@ use log::info;
 use wg_2024::controller::DroneCommand;
 
 impl RustBustersDrone {
+    /// Handles the given command
+    ///
+    /// #### Arguments
+    /// - `command`: The command to handle
+    ///
+    /// > Note:
+    /// > - The `Crash` command will shut down the drone
+    /// > - The `AddSender` command will add a sender for the given node ID
+    /// > - The `SetPacketDropRate` command will set the Packet Drop Rate to the given value
+    /// > - The `RemoveSender` command will remove the sender for the given node ID
     pub fn handle_command(&mut self, command: DroneCommand) {
         info!("Drone {}: Handling command {:?}", self.id, command);
         match command {
