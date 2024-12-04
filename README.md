@@ -44,7 +44,7 @@ The `hunt` command allows a `RustBustersDrone` or **hunter** to kill a non-`Rust
 request to the **Simulation Controller**. \
 This is the basic idea of how it works:
 
-1. Whenever a `RustBustersDrone` receives a `Dropped` packet
+1. Whenever a `RustBustersDrone` receives a `Nack` packet
 2. The drone sends a `Hunt Command` to the simulation controller to kill the drone.
 3. The Simulation Controller receives the command and makes the following controls:
     - If the network isn't partitioned after the `hunt`, then a `Crash` command is sent to the ghost drone.
