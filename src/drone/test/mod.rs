@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use crate::hunt::HuntMode;
     use crate::RustBustersDrone;
     use crossbeam_channel::unbounded;
     use std::collections::{HashMap, HashSet};
@@ -99,14 +98,12 @@ mod tests {
     }
 
     #[test]
-    fn test_hunt_mode_norm_shot() {
+    fn test_hunt_mode() {
         let mut drone = setup_drone_with_channels();
         let (controller_send, controller_recv) = unbounded();
         drone.controller_send = controller_send;
 
-        let hunt_mode = HuntMode::NormalShot(1, 2);
-
-        match drone.hunt_ghost(hunt_mode) {
+        match drone.hunt_ghost(2) {
             Ok(_) => {}
             Err(e) => {
                 panic!("Error: {e}");
@@ -120,78 +117,8 @@ mod tests {
                         assert_eq!(fragment.fragment_index, 0);
                         assert_eq!(fragment.total_n_fragments, 0);
                         assert_eq!(fragment.length, 0);
-                        assert_eq!(fragment.data[0], b'n');
-                        assert_eq!(fragment.data[1], 1);
-                        assert_eq!(fragment.data[2], 2);
-                    }
-                    _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
-                },
-                _ => panic!("Evento non atteso: {packet:?}"),
-            }
-        } else {
-            panic!("Timeout: nessun pacchetto ricevuto");
-        }
-    }
-
-    #[test]
-    fn test_hunt_mode_long_shot() {
-        let mut drone = setup_drone_with_channels();
-        let (controller_send, controller_recv) = unbounded();
-        drone.controller_send = controller_send;
-
-        let hunt_mode = HuntMode::LongShot(1, 10);
-
-        match drone.hunt_ghost(hunt_mode) {
-            Ok(_) => {}
-            Err(e) => {
-                panic!("Error: {e}");
-            }
-        }
-
-        if let Ok(packet) = controller_recv.recv_timeout(std::time::Duration::from_secs(1)) {
-            match packet {
-                DroneEvent::PacketSent(packet) => match packet.pack_type {
-                    PacketType::MsgFragment(fragment) => {
-                        assert_eq!(fragment.fragment_index, 0);
-                        assert_eq!(fragment.total_n_fragments, 0);
-                        assert_eq!(fragment.length, 0);
-                        assert_eq!(fragment.data[0], b'l');
-                        assert_eq!(fragment.data[1], 1);
-                        assert_eq!(fragment.data[2], 10);
-                    }
-                    _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
-                },
-                _ => panic!("Evento non atteso: {packet:?}"),
-            }
-        } else {
-            panic!("Timeout: nessun pacchetto ricevuto");
-        }
-    }
-
-    #[test]
-    fn test_hunt_mode_emp() {
-        let mut drone = setup_drone_with_channels();
-        let (controller_send, controller_recv) = unbounded();
-        drone.controller_send = controller_send;
-
-        let hunt_mode = HuntMode::EMPBlast(1);
-
-        match drone.hunt_ghost(hunt_mode) {
-            Ok(_) => {}
-            Err(e) => {
-                panic!("Error: {e}");
-            }
-        }
-
-        if let Ok(packet) = controller_recv.recv_timeout(std::time::Duration::from_secs(1)) {
-            match packet {
-                DroneEvent::PacketSent(packet) => match packet.pack_type {
-                    PacketType::MsgFragment(fragment) => {
-                        assert_eq!(fragment.fragment_index, 0);
-                        assert_eq!(fragment.total_n_fragments, 0);
-                        assert_eq!(fragment.length, 0);
-                        assert_eq!(fragment.data[0], b'e');
-                        assert_eq!(fragment.data[1], 1);
+                        assert_eq!(fragment.data[0], drone.id);
+                        assert_eq!(fragment.data[1], 2);
                     }
                     _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
                 },

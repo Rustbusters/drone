@@ -40,28 +40,20 @@ impl RustBustersDrone {
             PacketType::MsgFragment(fragment) => {
                 self.handle_fragment(&packet, fragment, next_hop, allow_optimized);
             }
-            PacketType::Ack(_) | PacketType::Nack(_) | PacketType::FloodResponse(_) => {
-                // Forward these packets without dropping
-                if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
-                    if let Err(e) = next_sender.send(packet.clone()) {
-                        error!(
-                            "Drone {}: Error sending packet to {}: {}",
-                            self.id, next_hop, e
-                        );
-                        self.packet_send.remove(&next_hop);
-                        warn!(
-                            "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
-                            self.id, next_hop
-                        );
-                    } else {
-                        info!("Drone {}: Packet forwarded to {}", self.id, next_hop);
-                    }
-                } else {
-                    warn!(
-                        "Drone {}: Cannot forward packet, next hop {} is not a neighbor",
-                        self.id, next_hop
+            PacketType::Nack(nack) => {
+                if nack.nack_type == NackType::Dropped {
+                    info!(
+                        "Drone {}: Received Nack with Dropped type. Packet: {:?}",
+                        self.id, packet
                     );
+                    if let Err(e) = self.hunt_ghost(packet.routing_header.hops[0]) {
+                        warn!("Drone {}: Error hunting ghost: {}", self.id, e);
+                    }
                 }
+                self.forward_other_packet(next_hop, &packet);
+            }
+            PacketType::Ack(_) | PacketType::FloodResponse(_) => {
+                self.forward_other_packet(next_hop, &packet);
             }
             PacketType::FloodRequest(_) => {
                 error!(
@@ -252,6 +244,30 @@ impl RustBustersDrone {
                     nack_type: NackType::ErrorInRouting(next_hop),
                 },
                 allow_optimized,
+            );
+        }
+    }
+
+    fn forward_other_packet(&mut self, next_hop: NodeId, packet: &Packet) {
+        // Forward these packets without dropping
+        if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
+            if let Err(e) = next_sender.send(packet.clone()) {
+                error!(
+                    "Drone {}: Error sending packet to {}: {}",
+                    self.id, next_hop, e
+                );
+                self.packet_send.remove(&next_hop);
+                warn!(
+                            "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
+                            self.id, next_hop
+                        );
+            } else {
+                info!("Drone {}: Packet forwarded to {}", self.id, next_hop);
+            }
+        } else {
+            warn!(
+                "Drone {}: Cannot forward packet, next hop {} is not a neighbor",
+                self.id, next_hop
             );
         }
     }
