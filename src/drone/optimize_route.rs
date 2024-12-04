@@ -21,7 +21,7 @@ impl RustBustersDrone {
         {
             let mut ret_path = vec![self.id];
 
-            ret_path.append(path[pos..].to_vec().as_mut());
+            ret_path.append(path[(path.len() - pos - 1)..].to_vec().as_mut());
             ret_path
         } else {
             path.to_vec()

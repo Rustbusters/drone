@@ -105,6 +105,10 @@ mod tests {
 
         let path: Vec<NodeId> = vec![drone.id, 1, 4, 5, 6, 3, 11];
         assert_eq!(drone.optimize_route(&path), vec![drone.id, 3, 11]);
+
+        // no neighbors in the path
+        let path: Vec<NodeId> = vec![drone.id, 2, 4, 5, 6, 11];
+        assert_eq!(drone.optimize_route(&path), vec![drone.id, 2, 4, 5, 6, 11]);
     }
 
     #[test]
