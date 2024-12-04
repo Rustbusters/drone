@@ -70,12 +70,7 @@ impl Drone for RustBustersDrone {
             optimized_routing: false,
             running: true,
             shot_range: 0, // TODO: set by SC
-            sound_sys: if let Ok((stream, handle)) = OutputStream::try_default() {
-                Some((stream, handle))
-            } else {
-                println!("Error initializing audio system. Sound effects will be disabled.");
-                None
-            },
+            sound_sys: None,
         }
     }
 
@@ -127,5 +122,15 @@ impl RustBustersDrone {
             "Drone {}: Set optimized routing to {}",
             self.id, optimized_routing
         );
+    }
+
+    /// Enables the sound system for the drone
+    fn enable_sound(&mut self) {
+        if let Ok((stream, handle)) = OutputStream::try_default() {
+            self.sound_sys = Some((stream, handle));
+            info!("Drone {}: Sound system enabled", self.id);
+        } else {
+            warn!("Drone {}: Error enabling sound system", self.id);
+        }
     }
 }
