@@ -31,50 +31,59 @@ These features are the one standardized for every single drone implementation.
 - **Add Sender**: Dynamically adds communication channels for new neighbors.
 - **Set Packet Drop Rate**: Configures the PDR dynamically to test network resilience.
 
-## RustBusters features 😎
-
-### **Event Logging ✏️**
+### **Event Logging**
 
 Our drone provides comprehensive logging with levels: `debug`, `info`, `warn`, `error`, and `trace` for detailed runtime
 monitoring and troubleshooting.
 
-### **Hunt the ghost 👻**
+## RustBusters features 😎
+
+### **Hunt the ghosts 👻**
 
 The `hunt` command allows a `RustBustersDrone` or **hunter** to kill a non-`RustBustersDrone` or **ghost drone** via a
 request to the **Simulation Controller**. \
 This is the basic idea of how it works:
 
-1. The `RustBustersDrone`chooses a **hunt modality**. There are 3 main modalities:
-    1. **Normal shot**: the hunter crashes a ghost neighbor.
-    2. **Long shot**: the drone is given a max range within which its **proton pack** operates and it crashes a random
-       ghost drone within that range decided by the simulation controller.
-    3. **EMP blast**: the proton pack of the RustBustersDrone has a unique functionality that can be activated once
-       during its lifetime with which every ghost neighbor will be crashed.
-2. The hunter drone sends a specific command to the Simulation Controller.
-3. The Simulation Controller receives the command and verifies if the target is not a`RustBustersDrone` and if the
-   action maintains the network integrity.
+1. Whenever a `RustBustersDrone` receives a `Nack` packet
+2. The drone sends a `Hunt Command` to the simulation controller to kill the drone.
+3. The Simulation Controller receives the command and makes the following controls:
     - If the network isn't partitioned after the `hunt`, then a `Crash` command is sent to the ghost drone.
     - Otherwise, the command is canceled and the `hunt` initiator is notified.
-
-#### Encoding
 
 This feature of the drone uses the same `Packet` structure as specified in the protocol standard.\
 The only thing that changes is the encoding. The `HuntPacket` looks like this:
 
 ```rust
 Packet {
-pack_type: PacketType::MsgFragment(Fragment {
-fragment_index: 0,
-total_n_fragments: 0,
-length: 0,
-data: data_for_specific_mode // changes based on the mode you choose (NormalShot, LongShot or EMPBlast)
-}),
-routing_header: SourceRoutingHeader { hop_index: 0, hops: vec![] },
-session_id: 0,
+    pack_type: PacketType::MsgFragment(
+        Fragment {
+            fragment_index: 0,
+            total_n_fragments: 0,
+            length: 0,
+            data: data_for_specific_mode // changes based on the mode you choose (NormalShot, LongShot or EMPBlast) 
+        }
+    ),
+    routing_header: SourceRoutingHeader { hop_index: 0, hops: vec![] },
+    session_id: 0,
 }
 ```
 
 It is then put inside a `PacketSent` `NodeEvent`.
+
+### **Play some music 🎶**
+
+Our magnificent drone allows to reproduce sounds based on the packets received by the drone:
+
+- **Nack**: plays a "quack" sound 🦆
+- **Dropped**: plays a "Windows Error" sound 🪟
+- **Start**: plays a "YAHOO" Mario sound 🍄
+- **Crash**: plays a "Windows Shut Down" 💥
+- **Hunt Mode**: TBD 👻
+
+### **Optimized path**
+
+For the `FloodResponse` packets the drone is able to analyze the path and to optimize it by removing unnecessary hops.
+
 
 ## Configurable Options
 
