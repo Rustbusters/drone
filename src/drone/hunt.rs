@@ -1,3 +1,4 @@
+use crate::drone::sounds::HUNT_SOUND;
 use crate::RustBustersDrone;
 use wg_2024::controller::DroneEvent;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
@@ -43,12 +44,18 @@ impl RustBustersDrone {
 
         // Step 3: send the packet to the SC
         if self.controller_send.send(kill_node_event).is_ok() {
+            self.play_sound(HUNT_SOUND);
             Ok(())
         } else {
             Err("Error in sending Hunt Packet".to_string())
         }
     }
 
+    /// Sets the data of the packet
+    ///
+    /// #### Arguments
+    /// - `data`: The data to be set
+    /// - `target_id`: The ID of the target node
     pub fn set_data(&self, data: &mut [u8; FRAGMENT_DSIZE], target_id: NodeId) {
         data[0] = self.id;
         data[1] = target_id;

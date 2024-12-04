@@ -28,6 +28,7 @@ mod tests {
             optimized_routing: false,
             running: false,
             shot_range: 0,
+            sound_sys: None,
         }
     }
 

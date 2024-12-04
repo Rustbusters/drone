@@ -1,4 +1,5 @@
 use super::RustBustersDrone;
+use crate::drone::sounds::{DROP_SOUND, NACK_SOUND};
 use log::{debug, error, info, trace, warn};
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, Packet, PacketType};
@@ -62,6 +63,7 @@ impl RustBustersDrone {
                     self.id, next_hop
                 );
             } else {
+                self.play_sound(NACK_SOUND);
                 info!("Drone {}: Nack sent to {}", self.id, next_hop);
             }
         } else {

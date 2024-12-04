@@ -1,4 +1,5 @@
 use super::RustBustersDrone;
+use crate::drone::sounds::DROP_SOUND;
 use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::DroneEvent;
@@ -50,6 +51,7 @@ impl RustBustersDrone {
                         warn!("Drone {}: Error hunting ghost: {}", self.id, e);
                     }
                 }
+                self.play_sound(DROP_SOUND);
                 self.forward_other_packet(next_hop, &packet);
             }
             PacketType::Ack(_) | PacketType::FloodResponse(_) => {
