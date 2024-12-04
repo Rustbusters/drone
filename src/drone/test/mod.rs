@@ -3,16 +3,18 @@ mod tests {
     use crate::RustBustersDrone;
     use crossbeam_channel::unbounded;
     use std::collections::{HashMap, HashSet};
-    use wg_2024::network::SourceRoutingHeader;
+    use wg_2024::network::{NodeId, SourceRoutingHeader};
     use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType, FRAGMENT_DSIZE};
 
     fn setup_drone_with_channels() -> RustBustersDrone {
-        let id = 1; // ID del drone
-        let (controller_send, controller_recv) = unbounded();
-        let (cmd_send, cmd_recv) = unbounded();
-        let (packet_send_1, packet_recv) = unbounded();
+        let id = 10; // ID del drone
+        let (controller_send, _controller_recv) = unbounded();
+        let (_cmd_send, cmd_recv) = unbounded();
+        let (packet_send_to_2, packet_recv) = unbounded();
+        let (packet_send_to_3, _packet_recv_3) = unbounded();
         let mut packet_send = HashMap::new();
-        packet_send.insert(2, packet_send_1); // Nodo 2 come "neighbor"
+        packet_send.insert(2, packet_send_to_2); // Nodo 2 come "neighbor"
+        packet_send.insert(3, packet_send_to_3); // Nodo 3 come "neighbor"
 
         RustBustersDrone {
             id,
@@ -64,5 +66,32 @@ mod tests {
         } else {
             panic!("Timeout: nessun pacchetto ricevuto");
         }
+    }
+
+    #[test]
+    fn test_path_optimization_with_loop() {
+        let drone = setup_drone_with_channels();
+
+        // in some test cases 2 was not included in the path because it is a neighbor and it produces a different output (correct but different)
+        let cycle_path: Vec<NodeId> = vec![drone.id, 3, 4, 5, 3, 6, 7];
+        assert_eq!(drone.optimize_route(&cycle_path), vec![drone.id, 3, 6, 7]);
+
+        let cycle_path: Vec<NodeId> = vec![drone.id, 3, drone.id, 5, 3, 6, 7];
+        assert_eq!(drone.optimize_route(&cycle_path), vec![drone.id, 3, 6, 7]);
+
+        let optimizable_path: Vec<NodeId> = vec![drone.id, 2, 3, 12];
+        assert_eq!(
+            drone.optimize_route(&optimizable_path),
+            vec![drone.id, 3, 12]
+        );
+
+        let non_optimizable_path: Vec<NodeId> = vec![drone.id, 3, 4, 5, 6, 7];
+        assert_eq!(
+            drone.optimize_route(&non_optimizable_path),
+            vec![drone.id, 3, 4, 5, 6, 7]
+        );
+
+        let pair_path: Vec<NodeId> = vec![drone.id, drone.id];
+        assert_eq!(drone.optimize_route(&pair_path), vec![drone.id]);
     }
 }
