@@ -86,7 +86,7 @@ impl RustBustersDrone {
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
             self.send_nack(
-                packet.clone(),
+                &packet,
                 Nack {
                     fragment_index: 0, // TODO: Set fragment index
                     nack_type: NackType::UnexpectedRecipient(self.id),
@@ -115,7 +115,7 @@ impl RustBustersDrone {
         if next_hop_index >= packet.routing_header.hops.len() {
             warn!("Drone {}: Destination is drone, sending Nack.", self.id);
             self.send_nack(
-                packet.clone(),
+                &packet,
                 Nack {
                     fragment_index: 0, // TODO: Set fragment index
                     nack_type: NackType::DestinationIsDrone,
@@ -144,7 +144,7 @@ impl RustBustersDrone {
             );
             trace!("Drone {}: Packet: {:?}", self.id, packet);
             self.send_nack(
-                packet.clone(),
+                &packet,
                 Nack {
                     fragment_index: 0, // TODO: Set fragment index
                     nack_type: NackType::ErrorInRouting(next_hop),
@@ -182,7 +182,7 @@ impl RustBustersDrone {
                 self.id, fragment.fragment_index
             );
             self.send_nack(
-                packet.clone(),
+                &packet,
                 Nack {
                     fragment_index: fragment.fragment_index,
                     nack_type: NackType::Dropped,
@@ -216,7 +216,7 @@ impl RustBustersDrone {
                         );
                 // Optionally, send a Nack back to the sender
                 self.send_nack(
-                    packet.clone(),
+                    &packet,
                     Nack {
                         fragment_index: fragment.fragment_index,
                         nack_type: NackType::ErrorInRouting(next_hop),
@@ -240,7 +240,7 @@ impl RustBustersDrone {
             );
             // Neighbor not found in packet_send, send Nack
             self.send_nack(
-                packet.clone(),
+                &packet,
                 Nack {
                     fragment_index: fragment.fragment_index,
                     nack_type: NackType::ErrorInRouting(next_hop),

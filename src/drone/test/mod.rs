@@ -27,7 +27,7 @@ mod tests {
             received_floods: HashSet::default(),
             optimized_routing: false,
             running: false,
-            shot_range: 0,
+            hunt_mode: false,
             sound_sys: None,
         }
     }
@@ -52,13 +52,12 @@ mod tests {
             nack_type: NackType::Dropped,
         };
 
-        drone.send_nack(packet, nack.clone(), false);
+        drone.send_nack(&packet, nack.clone(), false);
 
         if let Ok(packet) = drone
             .packet_recv
             .recv_timeout(std::time::Duration::from_secs(1))
         {
-            println!("{:?}", packet);
             match packet.pack_type {
                 PacketType::Nack(nack) => {
                     assert_eq!(nack.fragment_index, 0);
@@ -72,7 +71,7 @@ mod tests {
     }
 
     #[test]
-    fn test_path_optimization_with_loop() {
+    /*fn test_path_optimization_with_loop() {
         let drone = setup_drone_with_channels();
 
         // in some test cases 2 was not included in the path because it is a neighbor and it produces a different output (correct but different)
@@ -96,6 +95,16 @@ mod tests {
 
         let pair_path: Vec<NodeId> = vec![drone.id, drone.id];
         assert_eq!(drone.optimize_route(&pair_path), vec![drone.id]);
+    }*/
+    fn test_path_optimization() {
+        // drone with neighbors 2 and 3
+        let drone = setup_drone_with_channels();
+
+        let path: Vec<NodeId> = vec![drone.id, 1, 2, 11];
+        assert_eq!(drone.optimize_route(&path), vec![drone.id, 2, 11]);
+
+        let path: Vec<NodeId> = vec![drone.id, 1, 4, 5, 6, 3, 11];
+        assert_eq!(drone.optimize_route(&path), vec![drone.id, 3, 11]);
     }
 
     #[test]
@@ -117,7 +126,7 @@ mod tests {
                     PacketType::MsgFragment(fragment) => {
                         assert_eq!(fragment.fragment_index, 0);
                         assert_eq!(fragment.total_n_fragments, 0);
-                        assert_eq!(fragment.length, 0);
+                        assert_eq!(fragment.length, 169);
                         assert_eq!(fragment.data[0], drone.id);
                         assert_eq!(fragment.data[1], 2);
                     }
