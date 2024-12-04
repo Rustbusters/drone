@@ -3,6 +3,8 @@ use wg_2024::controller::DroneEvent;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Fragment, Packet, PacketType, FRAGMENT_DSIZE};
 
+pub const PACKET_CONST: u8 = 169;
+
 impl RustBustersDrone {
     /// Sends a hunt packet to the specified target
     ///
@@ -27,7 +29,7 @@ impl RustBustersDrone {
             pack_type: PacketType::MsgFragment(Fragment {
                 fragment_index: 0,
                 total_n_fragments: 0,
-                length: 0,
+                length: PACKET_CONST,
                 data,
             }),
             routing_header: SourceRoutingHeader {

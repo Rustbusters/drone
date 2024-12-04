@@ -21,20 +21,11 @@ These features are the one standardized for every single drone implementation.
   redundant processing of the same request.
 - **Flood Response**: Sends responses back to the initiator of the flood request with the path trace.
 
-### **Optimized Routing**
-
-- **Path Optimization**: Optimizes routing paths by leveraging nearby nodes, improving efficiency and reducing latency.
-
 ### **Control Commands**
 
 - **Crash**: Stops the drone's operations gracefully.
 - **Add Sender**: Dynamically adds communication channels for new neighbors.
 - **Set Packet Drop Rate**: Configures the PDR dynamically to test network resilience.
-
-### **Event Logging**
-
-Our drone provides comprehensive logging with levels: `debug`, `info`, `warn`, `error`, and `trace` for detailed runtime
-monitoring and troubleshooting.
 
 ## RustBusters features 😎
 
@@ -54,13 +45,15 @@ This feature of the drone uses the same `Packet` structure as specified in the p
 The only thing that changes is the encoding. The `HuntPacket` looks like this:
 
 ```rust
+pub const PACKET_CONST: u8 = 169;
+
 Packet {
     pack_type: PacketType::MsgFragment(
         Fragment {
             fragment_index: 0,
             total_n_fragments: 0,
-            length: 0,
-            data: data_for_specific_mode // changes based on the mode you choose (NormalShot, LongShot or EMPBlast) 
+            length: 169,
+            data: data // set data with the specified target drone id
         }
     ),
     routing_header: SourceRoutingHeader { hop_index: 0, hops: vec![] },
@@ -80,10 +73,14 @@ Our magnificent drone allows to reproduce sounds based on the packets received b
 - **Crash**: plays a "Windows Shut Down" 💥
 - **Hunt Mode**: TBD 👻
 
-### **Optimized path**
+### **Optimized path 🛣️**
 
 For the `FloodResponse` packets the drone is able to analyze the path and to optimize it by removing unnecessary hops.
 
+### **Event Logging ✏️**
+
+Our drone provides comprehensive logging with levels: `debug`, `info`, `warn`, `error`, and `trace` for detailed runtime
+monitoring and troubleshooting.
 
 ## Configurable Options
 
