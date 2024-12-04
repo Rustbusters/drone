@@ -17,8 +17,6 @@ use wg_2024::drone::Drone;
 use wg_2024::network::NodeId;
 use wg_2024::packet::{Packet, PacketType};
 
-pub type ShotRange = u8;
-
 pub struct RustBustersDrone {
     id: NodeId,
     controller_send: Sender<DroneEvent>,
@@ -29,7 +27,7 @@ pub struct RustBustersDrone {
     received_floods: HashSet<u64>,
     optimized_routing: bool,
     running: bool,
-    shot_range: ShotRange,
+    hunt_mode: bool,
     sound_sys: Option<(OutputStream, OutputStreamHandle)>,
 }
 
@@ -69,7 +67,7 @@ impl Drone for RustBustersDrone {
             received_floods: HashSet::new(),
             optimized_routing: false,
             running: true,
-            shot_range: 0, // TODO: set by SC
+            hunt_mode: false,
             sound_sys: None,
         }
     }
@@ -122,6 +120,15 @@ impl RustBustersDrone {
             "Drone {}: Set optimized routing to {}",
             self.id, optimized_routing
         );
+    }
+
+    /// Sets the `hunt_mode` field to the given value
+    ///
+    /// #### Arguments
+    /// - `hunt_mode`: The value to set the `hunt_mode` field to
+    pub fn set_hunt_mode(&mut self, hunt_mode: bool) {
+        self.hunt_mode = hunt_mode;
+        debug!("Drone {}: Set hunt mode to {}", self.id, hunt_mode);
     }
 
     /// Enables the sound system for the drone

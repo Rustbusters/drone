@@ -67,11 +67,11 @@ It is then put inside a `PacketSent` `NodeEvent`.
 
 Our magnificent drone allows to reproduce sounds based on the packets received by the drone:
 
-- **Nack**: plays a "quack" sound 🦆
-- **Dropped**: plays a "Windows Error" sound 🪟
 - **Start**: plays a "YAHOO" Mario sound 🍄
+- **Nack**: plays a "Windows Error" sound 🪟
+- **Dropped**: plays a "Quack" sound 🦆
+- **Hunt Mode**: plays a "Piu Piu Piu" Browl Stars sound 🔫
 - **Crash**: plays a "Windows Shut Down" 💥
-- **Hunt Mode**: TBD 👻
 
 ### **Optimized path 🛣️**
 
@@ -87,7 +87,7 @@ monitoring and troubleshooting.
 - **Node ID**: Unique identifier for the drone.
 - **Packet Drop Rate (PDR)**: Probability of dropping packets (0-100%).
 - **Optimized Routing**: Toggle for enabling route optimization.
-- **Shot Range**: Adjusts the max range for the drone to shoot.
+- **Sound Effects**: Toggle for enabling sound effects.
 
 This drone is part of the `RustBusters` project and integrates seamlessly into the `wg_2024` simulation framework for
 distributed network experiments.
