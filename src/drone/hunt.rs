@@ -39,10 +39,10 @@ impl RustBustersDrone {
             session_id: 0,
         };
         // Create DroneEvent
-        let kill_node_event = DroneEvent::PacketSent(hunt_packet);
+        let hunt_node_event = DroneEvent::PacketSent(hunt_packet);
 
         // Step 3: send the packet to the SC
-        if self.controller_send.send(kill_node_event).is_ok() {
+        if self.controller_send.send(hunt_node_event).is_ok() {
             Ok(())
         } else {
             Err("Error in sending Hunt Packet".to_string())
