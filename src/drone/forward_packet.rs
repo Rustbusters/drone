@@ -1,5 +1,4 @@
 use super::RustBustersDrone;
-use crate::drone::sounds::DROP_SOUND;
 use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::DroneEvent;
@@ -51,7 +50,6 @@ impl RustBustersDrone {
                         warn!("Drone {}: Error hunting ghost: {}", self.id, e);
                     }
                 }
-                self.play_sound(DROP_SOUND);
                 self.forward_other_packet(next_hop, &packet);
             }
             PacketType::Ack(_) | PacketType::FloodResponse(_) => {
@@ -190,7 +188,7 @@ impl RustBustersDrone {
                 self.id, fragment.fragment_index
             );
             self.send_nack(
-                &packet,
+                packet,
                 Nack {
                     fragment_index: fragment.fragment_index,
                     nack_type: NackType::Dropped,
@@ -224,7 +222,7 @@ impl RustBustersDrone {
                         );
                 // Optionally, send a Nack back to the sender
                 self.send_nack(
-                    &packet,
+                    packet,
                     Nack {
                         fragment_index: fragment.fragment_index,
                         nack_type: NackType::ErrorInRouting(next_hop),
@@ -248,7 +246,7 @@ impl RustBustersDrone {
             );
             // Neighbor not found in packet_send, send Nack
             self.send_nack(
-                &packet,
+                packet,
                 Nack {
                     fragment_index: fragment.fragment_index,
                     nack_type: NackType::ErrorInRouting(next_hop),

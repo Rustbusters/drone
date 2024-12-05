@@ -132,7 +132,7 @@ impl RustBustersDrone {
     }
 
     /// Enables the sound system for the drone
-    fn enable_sound(&mut self) {
+    pub fn enable_sound(&mut self) {
         if let Ok((stream, handle)) = OutputStream::try_default() {
             self.sound_sys = Some((stream, handle));
             info!("Drone {}: Sound system enabled", self.id);
