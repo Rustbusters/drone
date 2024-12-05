@@ -33,15 +33,16 @@ These features are the one standardized for every single drone implementation.
 
 The drone optimizes routes by removing unnecessary hops for `Nack`s and `FloodResponse`s.
 
-### Optimization Process
+#### Optimization Process
 
 Example Scenario:
 - Route: `[1, 2, 3, 4, 5, 6]`
 - Current drone: `2` 
-- Received a Nack from drone `1`. 
+- Received a `Nack` from drone `1`. 
 - Neighbors of `2`: `1`, `3`, and `5`. 
 
-Algorithm Steps:
+#### Algorithm Steps
+
 1. Start checking the route from the end.
 2. If a neighbor is found between the current drone (`2`) and the analyzed node (`6`,`5`,...), skip intermediate nodes and connect directly to the neighbor.
 3. If no neighbors are found, keep the original route.
@@ -53,6 +54,8 @@ So in our example (we're on drone `2`):
 - Analyze `5`, neighbor and thus skip the hops `2`-`3`, `3`-`4`, `4`-`5`
 - Attach `2` to `[5,6]`
 - The whole route becomes `[1,2,5,6]`
+
+![image](./assets/optimzed-route.jpg)
 
 ### **Hunt the ghosts 👻**
 
@@ -182,7 +185,8 @@ It also provides a whole bunch of strong unit and integration tests.
 - **Node ID**: Unique identifier for the drone.
 - **Packet Drop Rate (PDR)**: Probability of dropping packets (0-100%).
 - **Optimized Routing**: Toggle for enabling route optimization.
-- **Shot Range**: Adjusts the max range for the drone to shoot.
+- **Hunt Mode**: Toggle for enabling hunt mode.
+- **Sounds**: Toggle for enabling sounds.
 
 This drone is part of the `RustBusters` project and integrates seamlessly into the `wg_2024` simulation framework for
 distributed network experiments.
