@@ -31,7 +31,28 @@ These features are the one standardized for every single drone implementation.
 
 ### **Optimized path 🛣️**
 
-For the `FloodResponse` packets the drone is able to analyze the path and to optimize it by removing unnecessary hops.
+The drone optimizes routes by removing unnecessary hops for `Nack`s and `FloodResponse`s.
+
+### Optimization Process
+
+Example Scenario:
+- Route: `[1, 2, 3, 4, 5, 6]`
+- Current drone: `2` 
+- Received a Nack from drone `1`. 
+- Neighbors of `2`: `1`, `3`, and `5`. 
+
+Algorithm Steps:
+1. Start checking the route from the end.
+2. If a neighbor is found between the current drone (`2`) and the analyzed node (`6`,`5`,...), skip intermediate nodes and connect directly to the neighbor.
+3. If no neighbors are found, keep the original route.
+
+This ensures efficient path analysis and reduced hops where possible.
+
+So in our example (we're on drone `2`):
+- Analyze `6`, not neighbor.
+- Analyze `5`, neighbor and thus skip the hops `2`-`3`, `3`-`4`, `4`-`5`
+- Attach `2` to `[5,6]`
+- The whole route becomes `[1,2,5,6]`
 
 ### **Hunt the ghosts 👻**
 
