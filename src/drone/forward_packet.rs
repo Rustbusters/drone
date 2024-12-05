@@ -32,7 +32,7 @@ impl RustBustersDrone {
 
         // Step 4: Identify next hop and check if it's a neighbor
         let next_hop = packet.routing_header.hops[next_hop_index];
-        if self.check_neighbor(&packet, next_hop, allow_optimized) {
+        if !self.check_neighbor(&packet, next_hop, allow_optimized) {
             return;
         }
 
@@ -85,14 +85,17 @@ impl RustBustersDrone {
                 "Drone {}: Unexpected recipient. Expected {}, got {}",
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
-            self.send_nack(
-                &packet,
-                Nack {
-                    fragment_index: 0, // TODO: Set fragment index
-                    nack_type: NackType::UnexpectedRecipient(self.id),
-                },
-                allow_optimized,
-            );
+            if let PacketType::MsgFragment(frg) = &packet.pack_type {
+                self.send_nack(
+                    packet,
+                    Nack {
+                        fragment_index: frg.fragment_index,
+                        nack_type: NackType::UnexpectedRecipient(self.id),
+                    },
+                    allow_optimized,
+                );
+            }
+
             return false;
         }
         true
@@ -114,14 +117,16 @@ impl RustBustersDrone {
     ) -> bool {
         if next_hop_index >= packet.routing_header.hops.len() {
             warn!("Drone {}: Destination is drone, sending Nack.", self.id);
-            self.send_nack(
-                &packet,
-                Nack {
-                    fragment_index: 0, // TODO: Set fragment index
-                    nack_type: NackType::DestinationIsDrone,
-                },
-                allow_optimized,
-            );
+            if let PacketType::MsgFragment(frg) = &packet.pack_type {
+                self.send_nack(
+                    packet,
+                    Nack {
+                        fragment_index: frg.fragment_index,
+                        nack_type: NackType::UnexpectedRecipient(self.id),
+                    },
+                    allow_optimized,
+                );
+            }
             return true;
         }
         false
@@ -143,14 +148,17 @@ impl RustBustersDrone {
                 self.id, next_hop
             );
             trace!("Drone {}: Packet: {:?}", self.id, packet);
-            self.send_nack(
-                &packet,
-                Nack {
-                    fragment_index: 0, // TODO: Set fragment index
-                    nack_type: NackType::ErrorInRouting(next_hop),
-                },
-                allow_optimized,
-            );
+            if let PacketType::MsgFragment(frg) = &packet.pack_type {
+                self.send_nack(
+                    packet,
+                    Nack {
+                        fragment_index: frg.fragment_index,
+                        nack_type: NackType::ErrorInRouting(next_hop),
+                    },
+                    allow_optimized,
+                );
+            }
+
             return false;
         }
         true
