@@ -1,4 +1,4 @@
-# RustBusters Drone Capabilities
+# RustBusters Drone
 
 The `RustBustersDrone` is a software-defined drone designed to work in a distributed network simulation.
 It was developed for the Advanced Programming course 2024 at the University of Trento.

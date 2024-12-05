@@ -1,5 +1,8 @@
 use super::RustBustersDrone;
+use crate::drone::sounds::CRASH_SOUND;
 use log::info;
+use std::thread::sleep;
+use std::time::Duration;
 use wg_2024::controller::DroneCommand;
 
 impl RustBustersDrone {
@@ -18,6 +21,9 @@ impl RustBustersDrone {
         match command {
             DroneCommand::Crash => {
                 info!("Drone {}: Received Crash command. Shutting down.", self.id);
+                self.play_sound(CRASH_SOUND);
+                // Wait for the sound to finish playing
+                sleep(Duration::from_millis(1500));
                 self.running = false;
             }
             DroneCommand::AddSender(node_id, sender) => {
