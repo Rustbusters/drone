@@ -65,8 +65,8 @@ This is how it works:
 
 1. The `RustBustersDrone` receives a `Nack` packet
 2. The `RustBustersDrone` sends a `HuntPacket` to the simulation controller to eliminate the drone it received the `Nack` from.
-3. The Simulation Controller receives the packet, processes it, tries to remove the ghost drone by verifying the network integrity:
-    - If the network isn't partitioned after the drone removal, then a `Crash` command is sent to the ghost drone.
+3. The Simulation Controller receives the packet, processes it and makes the following controls:
+    - If the drone is not a `RustBustersDrone` and if the network isn't partitioned after the drone removal, then a `Crash` command is sent to the drone.
     - Otherwise, the command is canceled and the `hunt` initiator is notified with an `Err`.
 
 ![image info](./assets/figure.jpg)
