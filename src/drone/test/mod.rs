@@ -1,21 +1,21 @@
 #[cfg(test)]
 mod tests {
     use crate::RustBustersDrone;
-    use crossbeam_channel::unbounded;
+    use crossbeam_channel::{unbounded, Receiver};
     use std::collections::{HashMap, HashSet};
-    use wg_2024::controller::DroneEvent;
+    use wg_2024::controller::{DroneCommand, DroneEvent};
     use wg_2024::network::{NodeId, SourceRoutingHeader};
-    use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType, FRAGMENT_DSIZE};
+    use wg_2024::packet::NodeType::{Client, Drone};
+    use wg_2024::packet::{
+        Ack, FloodRequest, Fragment, Nack, NackType, Packet, PacketType, FRAGMENT_DSIZE,
+    };
 
-    fn setup_drone_with_channels() -> RustBustersDrone {
+    fn setup_drone() -> RustBustersDrone {
         let id = 10; // ID del drone
         let (controller_send, _controller_recv) = unbounded();
         let (_cmd_send, cmd_recv) = unbounded();
-        let (packet_send_to_2, packet_recv) = unbounded();
-        let (packet_send_to_3, _packet_recv_3) = unbounded();
-        let mut packet_send = HashMap::new();
-        packet_send.insert(2, packet_send_to_2); // Nodo 2 come "neighbor"
-        packet_send.insert(3, packet_send_to_3); // Nodo 3 come "neighbor"
+        let (_packet_send_to_2, packet_recv) = unbounded();
+        let packet_send = HashMap::new();
 
         RustBustersDrone {
             id,
@@ -35,7 +35,10 @@ mod tests {
     #[test]
     fn test_send_nack_success() {
         // Setup
-        let mut drone = setup_drone_with_channels();
+        let mut drone = setup_drone();
+        let (neighbor_2_sender, check_recv) = unbounded();
+        drone.packet_send.insert(2, neighbor_2_sender); // Nodo 2 come "neighbor"
+
         let hops = vec![10, 2, 1, 11]; // Nodo 1 (attuale), Nodo 2 (destinazione)
         let packet = Packet {
             pack_type: PacketType::MsgFragment(Fragment {
@@ -54,10 +57,7 @@ mod tests {
 
         drone.send_nack(&packet, nack.clone(), false);
 
-        if let Ok(packet) = drone
-            .packet_recv
-            .recv_timeout(std::time::Duration::from_secs(1))
-        {
+        if let Ok(packet) = check_recv.recv_timeout(std::time::Duration::from_secs(1)) {
             match packet.pack_type {
                 PacketType::Nack(nack) => {
                     assert_eq!(nack.fragment_index, 0);
@@ -71,34 +71,13 @@ mod tests {
     }
 
     #[test]
-    /*fn test_path_optimization_with_loop() {
-        let drone = setup_drone_with_channels();
-
-        // in some test cases 2 was not included in the path because it is a neighbor and it produces a different output (correct but different)
-        let cycle_path: Vec<NodeId> = vec![drone.id, 3, 4, 5, 3, 6, 7];
-        assert_eq!(drone.optimize_route(&cycle_path), vec![drone.id, 3, 6, 7]);
-
-        let cycle_path: Vec<NodeId> = vec![drone.id, 3, drone.id, 5, 3, 6, 7];
-        assert_eq!(drone.optimize_route(&cycle_path), vec![drone.id, 3, 6, 7]);
-
-        let optimizable_path: Vec<NodeId> = vec![drone.id, 2, 3, 12];
-        assert_eq!(
-            drone.optimize_route(&optimizable_path),
-            vec![drone.id, 3, 12]
-        );
-
-        let non_optimizable_path: Vec<NodeId> = vec![drone.id, 3, 4, 5, 6, 7];
-        assert_eq!(
-            drone.optimize_route(&non_optimizable_path),
-            vec![drone.id, 3, 4, 5, 6, 7]
-        );
-
-        let pair_path: Vec<NodeId> = vec![drone.id, drone.id];
-        assert_eq!(drone.optimize_route(&pair_path), vec![drone.id]);
-    }*/
     fn test_path_optimization() {
         // drone with neighbors 2 and 3
-        let drone = setup_drone_with_channels();
+        let mut drone = setup_drone();
+        let (neighbor_2_sender, _check_recv) = unbounded();
+        drone.packet_send.insert(2, neighbor_2_sender); // Nodo 2 come "neighbor"
+        let (neighbor_3_sender, _check_recv) = unbounded();
+        drone.packet_send.insert(3, neighbor_3_sender); // Nodo 3 come "neighbor"
 
         let path: Vec<NodeId> = vec![drone.id, 1, 2, 11];
         assert_eq!(drone.optimize_route(&path), vec![drone.id, 2, 11]);
@@ -113,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_hunt_mode() {
-        let mut drone = setup_drone_with_channels();
+        let mut drone = setup_drone();
         let (controller_send, controller_recv) = unbounded();
         drone.controller_send = controller_send;
 
@@ -137,6 +116,142 @@ mod tests {
                     _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
                 },
                 _ => panic!("Evento non atteso: {packet:?}"),
+            }
+        } else {
+            panic!("Timeout: nessun pacchetto ricevuto");
+        }
+    }
+
+    #[test]
+    fn test_forward_other_packets() {
+        fn check_ack_recv(recv: &Receiver<Packet>) {
+            if let Ok(packet) = recv.recv_timeout(std::time::Duration::from_secs(1)) {
+                match packet.pack_type {
+                    PacketType::Ack(ack) => {
+                        assert_eq!(ack.fragment_index, 0);
+                    }
+                    _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
+                }
+            } else {
+                panic!("Timeout: nessun pacchetto ricevuto");
+            }
+        }
+
+        let mut drone = setup_drone();
+        // Nodo 200 come "neighbor"
+        let (neighbor_200_sender, check_200_recv) = unbounded();
+        drone.packet_send.insert(200, neighbor_200_sender);
+        // Nodo 3 come "neighbor"
+        let (neighbor_3_sender, check_3_recv) = unbounded();
+        drone.packet_send.insert(3, neighbor_3_sender);
+
+        let mut packet = Packet {
+            pack_type: PacketType::Ack(Ack { fragment_index: 0 }),
+            routing_header: SourceRoutingHeader {
+                hop_index: 3,
+                hops: vec![100, 99, drone.id, 3, 5, 200, 1, 11],
+            },
+            session_id: 123,
+        };
+
+        // Test non-optimized routing
+        drone.optimized_routing = false;
+        drone.forward_other_packet(&mut packet);
+
+        check_ack_recv(&check_3_recv);
+        assert_eq!(
+            packet.routing_header.hops,
+            vec![100, 99, drone.id, 3, 5, 200, 1, 11]
+        );
+
+        // Test optimized routing
+        drone.optimized_routing = true;
+        drone.forward_other_packet(&mut packet);
+
+        check_ack_recv(&check_200_recv);
+        assert_eq!(
+            packet.routing_header.hops,
+            vec![100, 99, drone.id, 200, 1, 11]
+        );
+    }
+
+    #[test]
+    fn test_handle_command() {
+        let mut drone = setup_drone();
+
+        drone.running = true;
+        drone.handle_command(DroneCommand::Crash);
+        assert!(!drone.running);
+
+        let (neighbor_2_sender, _check_recv) = unbounded();
+        drone.handle_command(DroneCommand::AddSender(2, neighbor_2_sender));
+        assert_eq!(drone.packet_send.len(), 1);
+        assert!(drone.packet_send.contains_key(&2));
+
+        drone.handle_command(DroneCommand::RemoveSender(2));
+        assert_eq!(drone.packet_send.len(), 0);
+
+        drone.pdr = 0;
+        drone.handle_command(DroneCommand::SetPacketDropRate(0.5));
+        assert_eq!(drone.pdr, 50);
+    }
+
+    #[test]
+    fn test_handle_flood_request() {
+        let mut drone = setup_drone();
+        let (neighbor_2_sender, _check_recv) = unbounded();
+        drone.packet_send.insert(2, neighbor_2_sender); // Nodo 2 come "neighbor"
+        let (neighbor_3_sender, check_3_recv) = unbounded();
+        drone.packet_send.insert(3, neighbor_3_sender); // Nodo 3 come "neighbor"
+
+        let mut packet = Packet {
+            pack_type: PacketType::FloodRequest(FloodRequest {
+                flood_id: 123,
+                initiator_id: 1,
+                path_trace: vec![(1, Client), (2, Drone)],
+            }),
+            routing_header: SourceRoutingHeader {
+                hop_index: 0,
+                hops: vec![],
+            },
+            session_id: 123,
+        };
+
+        drone.handle_flood_request(packet.clone());
+
+        if let Ok(packet) = check_3_recv.recv_timeout(std::time::Duration::from_secs(1)) {
+            match packet.pack_type {
+                PacketType::FloodRequest(request) => {
+                    assert_eq!(request.flood_id, 123);
+                    assert_eq!(
+                        request.path_trace,
+                        vec![(1, Client), (2, Drone), (drone.id, Drone)]
+                    );
+                }
+                _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
+            }
+        } else {
+            panic!("Timeout: nessun pacchetto ricevuto");
+        }
+
+        // After receiving a flood request with the same flood_id
+        packet.pack_type = PacketType::FloodRequest(FloodRequest {
+            flood_id: 123,
+            initiator_id: 1,
+            path_trace: vec![(1, Client), (3, Drone)],
+        });
+        drone.handle_flood_request(packet);
+
+        if let Ok(packet) = check_3_recv.recv_timeout(std::time::Duration::from_secs(1)) {
+            match packet.pack_type {
+                PacketType::FloodResponse(response) => {
+                    assert_eq!(response.flood_id, 123);
+                    assert_eq!(
+                        response.path_trace,
+                        vec![(1, Client), (3, Drone), (drone.id, Drone)]
+                    );
+                }
+                _ => panic!("Pacchetto non atteso: {:?}", packet.pack_type),
             }
         } else {
             panic!("Timeout: nessun pacchetto ricevuto");
