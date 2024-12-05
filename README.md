@@ -149,10 +149,10 @@ fn is_network_connected(simulation_controller: &RustBustersSimulationController)
 Our magnificent drone allows to reproduce sounds based on the packets received by the drone:
 
 - **Start**: When the drone `start`s it reproduces the “YAHOO” Mario sound 🍄.
-- **Nack**: Whenever the Rusbusters drone receives a `Nack` it plays a "QUACK" sound 🦆.
+- **Nack**: Whenever the Rusbusters drone produces a `Nack` it plays a "Windows Error" sound 🪟.
 - **Hunt Mode**: On `Nack` receipt the drone activates the ghost hunt and reproduces a “PIUPIU” sound 🔫 (like Colt from Brawl Stars).
 - **Crash**: Whenever the Rusbusters drone receives a `Crash` command from the mighty Simulation Controller the drone plays a "Windows Shut Down" sound 🪟.
-- **Dropped**: On packet `Drop` the drone plays a “Windows Error” sound and proceeds with the drop of the packet.
+- **Dropped**: On packet `Drop` the drone plays a “QUACK” sound 🦆 and proceeds with the drop of the packet.
 
 ### **Telegram Bot 🤖**
 
