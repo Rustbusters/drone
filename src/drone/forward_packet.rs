@@ -181,7 +181,7 @@ impl RustBustersDrone {
         // Check for packet drop
         let should_drop = {
             let mut rng = rand::thread_rng();
-            rng.gen_range(0..100) < self.pdr
+            rng.gen_range(0..100) <= self.pdr
         };
 
         if should_drop {
@@ -211,10 +211,10 @@ impl RustBustersDrone {
         }
 
         // Forward the packet to next_hop
-        if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
+        if let Some(next_sender) = self.packet_send.get(&next_hop) {
             if let Err(err) = next_sender.send(packet.clone()) {
                 self.packet_send.remove(&next_hop);
-                // Optionally, send a Nack back to the sender
+
                 self.send_nack(
                     packet,
                     Nack {
@@ -247,7 +247,7 @@ impl RustBustersDrone {
                 "Drone {}: Neighbor {} not found in packet_send.",
                 self.id, next_hop
             );
-            // Neighbor not found in packet_send, send Nack
+
             self.send_nack(
                 packet,
                 Nack {
@@ -273,7 +273,8 @@ impl RustBustersDrone {
         let next_hop = packet.routing_header.hops[packet.routing_header.hop_index];
 
         // Forward these packets without dropping
-        if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
+        // TODO: send Ack, Nack and FloodResponse to SC if error. Send Nack to sender if packet is MsgFragment
+        if let Some(next_sender) = self.packet_send.get(&next_hop) {
             if let Err(e) = next_sender.send(packet.clone()) {
                 self.packet_send.remove(&next_hop);
                 error!(

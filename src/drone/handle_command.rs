@@ -21,6 +21,7 @@ impl RustBustersDrone {
         match command {
             DroneCommand::Crash => {
                 info!("Drone {}: Received Crash command. Shutting down.", self.id);
+                // TODO: implementare correttamente il protocollo di crash
                 self.play_sound(CRASH_SOUND);
                 // Wait for the sound to finish playing
                 sleep(Duration::from_millis(1500));

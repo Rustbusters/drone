@@ -79,7 +79,7 @@ impl RustBustersDrone {
             },
             session_id,
         };
-        if let Some(sender) = self.packet_send.get(&sender_id).cloned() {
+        if let Some(sender) = self.packet_send.get(&sender_id) {
             if let Err(e) = sender.send(response_packet) {
                 self.packet_send.remove(&sender_id);
                 error!(
@@ -123,7 +123,7 @@ impl RustBustersDrone {
             self.id, flood_request.flood_id
         );
         self.received_floods.insert(flood_request.flood_id);
-        // Collect neighbor IDs and Senders into a separate vector
+        // Collect neighbor IDs and Senders into a separate vector (excluding the sender)
         let neighbors: Vec<(NodeId, Sender<Packet>)> = self
             .packet_send
             .iter()

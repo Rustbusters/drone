@@ -59,6 +59,7 @@ impl RustBustersDrone {
             self.play_sound(NACK_SOUND);
         }
 
+        // TODO: inviare il Nack al SC se si verifica un errore durante l'invio al presunto vicino
         if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
             if let Err(e) = next_sender.send(nack_packet) {
                 error!(
