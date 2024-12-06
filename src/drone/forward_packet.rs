@@ -23,14 +23,12 @@ impl RustBustersDrone {
         packet.routing_header.hop_index += 1;
 
         // Step 3: Check if drone is the final destination
-        let next_hop_index = packet.routing_header.hop_index;
-
-        if self.check_final_destination(&packet, next_hop_index, allow_optimized) {
+        if self.check_final_destination(&packet, allow_optimized) {
             return;
         }
 
         // Step 4: Identify next hop and check if it's a neighbor
-        let next_hop = packet.routing_header.hops[next_hop_index];
+        let next_hop = packet.routing_header.hops[packet.routing_header.hop_index];
         if !self.check_neighbor(&packet, next_hop, allow_optimized) {
             return;
         }
@@ -50,10 +48,10 @@ impl RustBustersDrone {
                         warn!("Drone {}: Error hunting ghost: {}", self.id, e);
                     }
                 }
-                self.forward_other_packet(next_hop, &packet);
+                self.forward_other_packet(&mut packet);
             }
             PacketType::Ack(_) | PacketType::FloodResponse(_) => {
-                self.forward_other_packet(next_hop, &packet);
+                self.forward_other_packet(&mut packet);
             }
             PacketType::FloodRequest(_) => {
                 error!(
@@ -72,7 +70,7 @@ impl RustBustersDrone {
     ///
     /// #### Returns
     /// A boolean indicating whether the current drone is the correct recipient
-    fn check_self_correct_hop(
+    pub(crate) fn check_self_correct_hop(
         &mut self,
         packet: &Packet,
         hop_index: usize,
@@ -107,13 +105,12 @@ impl RustBustersDrone {
     ///
     /// #### Returns
     /// A boolean indicating whether the current drone is the final destination
-    fn check_final_destination(
+    pub(crate) fn check_final_destination(
         &mut self,
         packet: &Packet,
-        next_hop_index: usize,
         allow_optimized: bool,
     ) -> bool {
-        if next_hop_index >= packet.routing_header.hops.len() {
+        if packet.routing_header.hops.last() == Some(&self.id) {
             warn!("Drone {}: Destination is drone, sending Nack.", self.id);
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 self.send_nack(
@@ -139,7 +136,12 @@ impl RustBustersDrone {
     ///
     /// #### Returns
     /// A boolean indicating whether the next hop is a neighbor
-    fn check_neighbor(&mut self, packet: &Packet, next_hop: NodeId, allow_optimized: bool) -> bool {
+    pub(crate) fn check_neighbor(
+        &mut self,
+        packet: &Packet,
+        next_hop: NodeId,
+        allow_optimized: bool,
+    ) -> bool {
         if !self.packet_send.contains_key(&next_hop) {
             warn!(
                 "Drone {}: Next hop {} is not a neighbor.",
@@ -169,7 +171,7 @@ impl RustBustersDrone {
     /// - `fragment`: The fragment to be handled
     /// - `next_hop`: The next hop to forward the packet to
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
-    fn handle_fragment(
+    pub(crate) fn handle_fragment(
         &mut self,
         packet: &Packet,
         fragment: &Fragment,
@@ -210,16 +212,8 @@ impl RustBustersDrone {
 
         // Forward the packet to next_hop
         if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
-            if let Err(e) = next_sender.send(packet.clone()) {
-                error!(
-                    "Drone {}: Error sending packet to {}: {}",
-                    self.id, next_hop, e
-                );
+            if let Err(err) = next_sender.send(packet.clone()) {
                 self.packet_send.remove(&next_hop);
-                warn!(
-                            "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
-                            self.id, next_hop
-                        );
                 // Optionally, send a Nack back to the sender
                 self.send_nack(
                     packet,
@@ -229,14 +223,23 @@ impl RustBustersDrone {
                     },
                     allow_optimized,
                 );
+                error!(
+                    "Drone {}: Error sending packet to {}: {}",
+                    self.id, next_hop, err
+                );
+                warn!(
+                    "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
+                    self.id, next_hop
+                );
             } else {
-                info!("Drone {}: Packet forwarded to {}", self.id, next_hop);
                 // Send PacketSent event to the controller
                 if let Err(e) = self
                     .controller_send
                     .send(DroneEvent::PacketSent(packet.clone()))
                 {
                     error!("Drone {}: Error sending PacketSent event: {}", self.id, e);
+                } else {
+                    info!("Drone {}: Packet forwarded to {}", self.id, next_hop);
                 }
             }
         } else {
@@ -256,19 +259,31 @@ impl RustBustersDrone {
         }
     }
 
-    fn forward_other_packet(&mut self, next_hop: NodeId, packet: &Packet) {
+    pub(crate) fn forward_other_packet(&mut self, packet: &mut Packet) {
+        if self.optimized_routing {
+            let (prev_hops, next_hops) = packet
+                .routing_header
+                .hops
+                .split_at_mut(packet.routing_header.hop_index - 1);
+            let mut optimized_next_hops = self.optimize_route(next_hops);
+
+            packet.routing_header.hops = prev_hops.to_vec();
+            packet.routing_header.hops.append(&mut optimized_next_hops);
+        }
+        let next_hop = packet.routing_header.hops[packet.routing_header.hop_index];
+
         // Forward these packets without dropping
         if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
             if let Err(e) = next_sender.send(packet.clone()) {
+                self.packet_send.remove(&next_hop);
                 error!(
                     "Drone {}: Error sending packet to {}: {}",
                     self.id, next_hop, e
                 );
-                self.packet_send.remove(&next_hop);
                 warn!(
-                            "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
-                            self.id, next_hop
-                        );
+                    "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
+                    self.id, next_hop
+                );
             } else {
                 info!("Drone {}: Packet forwarded to {}", self.id, next_hop);
             }

@@ -5,10 +5,10 @@ use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{FloodRequest, FloodResponse, NodeType, Packet, PacketType};
 
 impl RustBustersDrone {
-    /// Handle a FloodRequest packet
+    /// Handle a `FloodRequest` packet
     ///
     /// #### Arguments
-    /// - `packet`: The FloodRequest packet to be handled
+    /// - `packet`: The `FloodRequest` packet to be handled
     pub fn handle_flood_request(&mut self, packet: Packet) {
         debug!("Drone {}: Handling FloodRequest", self.id);
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
@@ -44,7 +44,7 @@ impl RustBustersDrone {
     /// - `flood_request`: The `FloodRequest` for which the `FloodResponse` is being sent
     /// - `session_id`: The session ID of the `FloodRequest`
     /// - `sender_id`: The ID of the sender of the `FloodRequest`
-    fn send_flood_response(
+    pub(crate) fn send_flood_response(
         &mut self,
         flood_request: &FloodRequest,
         session_id: u64,
@@ -59,26 +59,33 @@ impl RustBustersDrone {
             flood_id: flood_request.flood_id,
             path_trace: flood_request.path_trace.clone(),
         };
+
+        let return_path = flood_request
+            .path_trace
+            .iter()
+            .map(|(id, _)| *id)
+            .rev()
+            .collect::<Vec<NodeId>>();
+
         let response_packet = Packet {
             pack_type: PacketType::FloodResponse(response),
             routing_header: SourceRoutingHeader {
                 hop_index: 1,
-                hops: flood_request
-                    .path_trace
-                    .iter()
-                    .map(|(id, _)| *id)
-                    .rev()
-                    .collect(),
+                hops: if self.optimized_routing {
+                    self.optimize_route(&return_path)
+                } else {
+                    return_path
+                },
             },
             session_id,
         };
         if let Some(sender) = self.packet_send.get(&sender_id).cloned() {
             if let Err(e) = sender.send(response_packet) {
+                self.packet_send.remove(&sender_id);
                 error!(
                     "Drone {}: Error sending FloodResponse({}) to {}: {}",
                     self.id, flood_request.flood_id, sender_id, e
                 );
-                self.packet_send.remove(&sender_id);
                 warn!(
                     "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, sender_id
@@ -105,7 +112,7 @@ impl RustBustersDrone {
     /// - `sender_id`: The ID of the sender of the `FloodRequest`
     ///
     /// > Note: The `FloodRequest` is spread to all neighbors except the sender
-    fn spread_flood_request(
+    pub(crate) fn spread_flood_request(
         &mut self,
         flood_request: &FloodRequest,
         session_id: u64,
@@ -135,12 +142,12 @@ impl RustBustersDrone {
                 session_id,
             };
             if let Err(e) = neighbor_sender.send(packet) {
+                // Remove the neighbor from packet_send
+                self.packet_send.remove(&neighbor_id);
                 error!(
                     "Drone {}: Error sending FloodRequest({}) to {}: {}",
                     self.id, flood_request.flood_id, neighbor_id, e
                 );
-                // Remove the neighbor from packet_send
-                self.packet_send.remove(&neighbor_id);
                 warn!(
                     "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, neighbor_id
