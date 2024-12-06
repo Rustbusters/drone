@@ -57,6 +57,14 @@ So in our example (we're on drone `2`):
 
 ![image](./assets/optimzed-route.jpg)
 
+Code example for setting the optimized routing:
+
+```rust
+let mut drone = RustBustersDrone::new(...);
+drone.set_optimized_routing(true); // enables optimized routing 
+drone.set_optimized_routing(false); // disables optimized routing
+```
+
 ### **Ghost hunter 👻**
 
 The `hunt` command allows a `RustBustersDrone` or **hunter** to eliminate a non-`RustBustersDrone` or **ghost drone** 
@@ -69,7 +77,16 @@ This is how it works:
     - If the drone is not a `RustBustersDrone` and if the network isn't partitioned after the drone removal, then a `Crash` command is sent to the drone.
     - Otherwise, the command is canceled and the `hunt` initiator is notified with an `Err`.
 
+
 ![image info](./assets/figure.jpg)
+
+Code example for setting the hunt mode:
+
+```rust
+let mut drone = RustBustersDrone::new(...);
+drone.set_hunt_mode(true); // enables hunt mode
+drone.set_hunt_mode(false); // disables hunt mode
+```
 
 #### Hunter Drone to Simulation Controller
 
@@ -153,6 +170,13 @@ Our magnificent drone allows to reproduce sounds based on the packets received b
 - **Hunt Mode**: On `Nack` receipt the drone activates the ghost hunter mode and reproduces a **“PIUPIUPIU”** sound 🔫 (like Colt from Brawl Stars).
 - **Crash**: Whenever the Rusbusters drone receives a `Crash` command from the mighty Simulation Controller the drone plays a **"Windows Shut Down"** sound 🪟.
 - **Dropped**: On packet `Nack` `Dropped` the drone plays a **“QUACK”** sound 🦆 and proceeds with the drop of the packet.
+
+Code example for activating sounds:
+
+```rust
+let mut drone = RustBustersDrone::new(...);
+drone.enable_sound(); // enables sounds
+```
 
 ### **Telegram Bot 🤖**
 
