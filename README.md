@@ -57,13 +57,13 @@ So in our example (we're on drone `2`):
 
 ![image](./assets/optimzed-route.jpg)
 
-### **Hunt the ghosts 👻**
+### **Ghost hunter 👻**
 
 The `hunt` command allows a `RustBustersDrone` or **hunter** to eliminate a non-`RustBustersDrone` or **ghost drone** 
 from the network via a request to the **Simulation Controller**.\
 This is how it works:
 
-1. The `RustBustersDrone` receives a `Nack` packet
+1. The `RustBustersDrone` receives a `Nack` `Dropped` packet from another drone.
 2. The `RustBustersDrone` sends a `HuntPacket` to the simulation controller to eliminate the drone it received the `Nack` from.
 3. The Simulation Controller receives the packet, processes it and makes the following controls:
     - If the drone is not a `RustBustersDrone` and if the network isn't partitioned after the drone removal, then a `Crash` command is sent to the drone.
@@ -73,7 +73,7 @@ This is how it works:
 
 #### Hunter Drone to Simulation Controller
 
-This feature of the drone uses the same `Packet` structure as specified in the protocol standard.\
+This feature of the drone uses the same `Packet` structure as the one specified in the protocol standard.\
 The only thing that changes is the encoding. The `HuntPacket` looks like this:
 
 ```rust
@@ -131,7 +131,7 @@ fn handle_hunt(simulation_controller: &mut RustBustersSimulationController, targ
             Err("Cannot send crash command to drone".to_string())
         }
     } else {
-        // Abort operation and send error to drone by also readding the previosuly removed drone
+        // Abort operation, reestablish previous topology by readding the removed drone and send error
         Err("Cannot guarantee network integrity. Aborting hunt.".to_string())
     }
 }
@@ -148,11 +148,11 @@ fn is_network_connected(simulation_controller: &RustBustersSimulationController)
 
 Our magnificent drone allows to reproduce sounds based on the packets received by the drone:
 
-- **Start**: When the drone `start`s it reproduces the “YAHOO” Mario sound 🍄.
-- **Nack**: Whenever the Rusbusters drone produces a `Nack` it plays a "Windows Error" sound 🪟.
-- **Hunt Mode**: On `Nack` receipt the drone activates the ghost hunt and reproduces a “PIUPIU” sound 🔫 (like Colt from Brawl Stars).
-- **Crash**: Whenever the Rusbusters drone receives a `Crash` command from the mighty Simulation Controller the drone plays a "Windows Shut Down" sound 🪟.
-- **Dropped**: On packet `Drop` the drone plays a “QUACK” sound 🦆 and proceeds with the drop of the packet.
+- **Start**: When the drone `start`s it reproduces the **“YAHOO”** Mario sound 🍄.
+- **Nack**: Whenever the Rusbusters drone produces a `Nack` that is **not a `Dropped`** it plays a **"Windows Error"** sound 🪟.
+- **Hunt Mode**: On `Nack` receipt the drone activates the ghost hunter mode and reproduces a **“PIUPIUPIU”** sound 🔫 (like Colt from Brawl Stars).
+- **Crash**: Whenever the Rusbusters drone receives a `Crash` command from the mighty Simulation Controller the drone plays a **"Windows Shut Down"** sound 🪟.
+- **Dropped**: On packet `Nack` `Dropped` the drone plays a **“QUACK”** sound 🦆 and proceeds with the drop of the packet.
 
 ### **Telegram Bot 🤖**
 
