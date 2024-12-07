@@ -88,7 +88,7 @@ impl RustBustersDrone {
             session_id,
         };
         if let Some(sender) = self.packet_send.get(&sender_id) {
-            if let Err(e) = sender.send(response_packet) {
+            if let Err(e) = sender.send(response_packet.clone()) {
                 self.packet_send.remove(&sender_id);
                 error!(
                     "Drone {}: Error sending FloodResponse({}) to {}: {}",
@@ -98,6 +98,8 @@ impl RustBustersDrone {
                     "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, sender_id
                 );
+
+                self.send_packet_to_sc(response_packet);
             } else {
                 info!(
                     "Drone {}: FloodResponse({}) sent to {}",
@@ -109,6 +111,8 @@ impl RustBustersDrone {
                 "Drone {}: Sender {} not found in packet_send.",
                 self.id, sender_id
             );
+
+            self.send_packet_to_sc(response_packet);
         }
     }
 

@@ -310,4 +310,16 @@ impl RustBustersDrone {
             );
         }
     }
+
+    pub(crate) fn send_packet_to_sc(&mut self, packet: Packet) {
+        if self
+            .controller_send
+            .send(DroneEvent::ControllerShortcut(packet))
+            .is_ok()
+        {
+            info!("Drone {}: Packet sent to SC", self.id);
+        } else {
+            error!("Drone {}: Error sending packet to SC", self.id);
+        }
+    }
 }
