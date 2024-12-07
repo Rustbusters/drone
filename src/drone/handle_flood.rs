@@ -1,6 +1,7 @@
 use super::RustBustersDrone;
 use crossbeam_channel::Sender;
 use log::{debug, error, info, warn};
+use wg_2024::controller::DroneEvent;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{FloodRequest, FloodResponse, NodeType, Packet, PacketType};
 
@@ -9,7 +10,7 @@ impl RustBustersDrone {
     ///
     /// #### Arguments
     /// - `packet`: The `FloodRequest` packet to be handled
-    pub fn handle_flood_request(&mut self, packet: Packet) {
+    pub(crate) fn handle_flood_request(&mut self, packet: Packet) {
         // If the drone has crashed, the request can be dropped
         if !self.running {
             return;
@@ -99,12 +100,14 @@ impl RustBustersDrone {
                     self.id, sender_id
                 );
 
-                self.send_packet_to_sc(response_packet);
+                self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
             } else {
                 info!(
                     "Drone {}: FloodResponse({}) sent to {}",
                     self.id, flood_request.flood_id, sender_id
                 );
+
+                self.send_to_sc(DroneEvent::PacketSent(response_packet));
             }
         } else {
             warn!(
@@ -112,7 +115,7 @@ impl RustBustersDrone {
                 self.id, sender_id
             );
 
-            self.send_packet_to_sc(response_packet);
+            self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
         }
     }
 
@@ -143,6 +146,16 @@ impl RustBustersDrone {
             .filter(|(&neighbor_id, _)| neighbor_id != sender_id)
             .map(|(&neighbor_id, sender)| (neighbor_id, sender.clone()))
             .collect();
+
+        if neighbors.is_empty() {
+            debug!(
+                "Drone {}: No neighbors to forward FloodRequest({}) to",
+                self.id, flood_request.flood_id
+            );
+            self.send_flood_response(flood_request, session_id, sender_id);
+
+            return;
+        }
 
         // Forward FloodRequest to neighbors except the sender
         for (neighbor_id, neighbor_sender) in neighbors {
