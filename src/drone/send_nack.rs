@@ -1,6 +1,7 @@
 use super::RustBustersDrone;
 use crate::drone::sounds::{DROP_SOUND, NACK_SOUND};
 use log::{debug, error, info, trace, warn};
+use wg_2024::controller::DroneEvent::ControllerShortcut;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::NackType::Dropped;
 use wg_2024::packet::{Nack, Packet, PacketType};
@@ -17,8 +18,11 @@ impl RustBustersDrone {
         let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone
         let nack_type = nack.nack_type;
 
-        if hop_index == 0 {
-            error!("Drone {}: Error: hop_index is 0 in send_nack", self.id);
+        if hop_index == 0 || hop_index >= packet.routing_header.hops.len() {
+            error!(
+                "Drone {}: Error: hop_index out of range in nack {:?}",
+                self.id, nack
+            );
             return;
         }
 
@@ -46,11 +50,10 @@ impl RustBustersDrone {
         let next_hop = if nack_packet.routing_header.hops.len() > 1 {
             nack_packet.routing_header.hops[1]
         } else {
-            error!(
+            unreachable!(
                 "Drone {}: Error: hops len is 1 in nack {:?}",
                 self.id, nack_packet
             );
-            return;
         };
 
         if nack_type == Dropped {
@@ -59,14 +62,14 @@ impl RustBustersDrone {
             self.play_sound(NACK_SOUND);
         }
 
-        // TODO: inviare il Nack al SC se si verifica un errore durante l'invio al presunto vicino
         if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
-            if let Err(e) = next_sender.send(nack_packet) {
+            if let Err(e) = next_sender.send(nack_packet.clone()) {
                 error!(
                     "Drone {}: Error sending Nack to {}: {}",
                     self.id, next_hop, e
                 );
                 self.packet_send.remove(&next_hop);
+                self.send_to_sc(ControllerShortcut(nack_packet));
                 warn!(
                     "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, next_hop
@@ -80,6 +83,7 @@ impl RustBustersDrone {
                 self.id, next_hop
             );
             trace!("Drone {}: Nack packet: {:?}", self.id, nack_packet);
+            self.send_to_sc(ControllerShortcut(nack_packet));
         }
     }
 }
