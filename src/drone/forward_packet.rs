@@ -12,6 +12,18 @@ impl RustBustersDrone {
     /// - `packet`: The packet to be forwarded
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn forward_packet(&mut self, mut packet: Packet, allow_optimized: bool) {
+        trace!("Drone {} forwarding packet: {:?}", self.id, packet);
+        let hop_index = packet.routing_header.hop_index;
+
+        // Step 1: Check if hops[hop_index] matches self.id
+        if !self.check_self_correct_hop(&mut packet, hop_index, allow_optimized) {
+            return;
+        }
+
+        // Step 2: Increment hop_index
+        packet.routing_header.hop_index += 1;
+
+        // Step "2.1": Check if the drone is running, if not send ErrorInRouting
         if !self.running {
             if let MsgFragment(ref frg) = packet.pack_type {
                 self.send_nack(
@@ -25,17 +37,6 @@ impl RustBustersDrone {
                 return;
             }
         }
-
-        trace!("Drone {} forwarding packet: {:?}", self.id, packet);
-        let hop_index = packet.routing_header.hop_index;
-
-        // Step 1: Check if hops[hop_index] matches self.id
-        if !self.check_self_correct_hop(&packet, hop_index, allow_optimized) {
-            return;
-        }
-
-        // Step 2: Increment hop_index
-        packet.routing_header.hop_index += 1;
 
         // Step 3: Check if drone is the final destination
         if self.check_final_destination(&packet, allow_optimized) {
@@ -87,24 +88,35 @@ impl RustBustersDrone {
     /// A boolean indicating whether the current drone is the correct recipient
     pub(crate) fn check_self_correct_hop(
         &mut self,
-        packet: &Packet,
+        packet: &mut Packet,
         hop_index: usize,
         allow_optimized: bool,
     ) -> bool {
-        if packet.routing_header.hops[hop_index] != self.id {
+        if packet.routing_header.hops.len() <= hop_index
+            || packet.routing_header.hops[hop_index] != self.id
+        {
             warn!(
                 "Drone {}: Unexpected recipient. Expected {}, got {}",
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
-            if let PacketType::MsgFragment(frg) = &packet.pack_type {
-                self.send_nack(
-                    packet,
-                    Nack {
-                        fragment_index: frg.fragment_index,
-                        nack_type: NackType::UnexpectedRecipient(self.id),
-                    },
-                    allow_optimized,
-                );
+            if let MsgFragment(frg) = &packet.pack_type {
+                if let Some(pos) = packet
+                    .routing_header
+                    .hops
+                    .iter()
+                    .position(|&x| x == self.id)
+                {
+                    // Send Nack to the previous correct hop
+                    packet.routing_header.hop_index = pos + 1;
+                    self.send_nack(
+                        packet,
+                        Nack {
+                            fragment_index: frg.fragment_index,
+                            nack_type: NackType::UnexpectedRecipient(self.id),
+                        },
+                        allow_optimized,
+                    );
+                }
             }
 
             return false;
@@ -132,7 +144,7 @@ impl RustBustersDrone {
                     packet,
                     Nack {
                         fragment_index: frg.fragment_index,
-                        nack_type: NackType::UnexpectedRecipient(self.id),
+                        nack_type: NackType::DestinationIsDrone,
                     },
                     allow_optimized,
                 );
