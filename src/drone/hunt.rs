@@ -18,8 +18,9 @@ impl RustBustersDrone {
     /// #### Errors
     /// - If the packet could not be sent, an error message is returned
     pub fn hunt_ghost(&self, target_id: NodeId) -> Result<(), String> {
-        // Construct the hunt_packet
-        // You can recognize the packet for the fragment_index: 0, total_n_fragments: 0, length: 0
+        if !self.hunt_mode {
+            return Err("Drone is not in hunt mode".to_string());
+        }
 
         // Step 1: construct the data:
         let mut data = [0; FRAGMENT_DSIZE];

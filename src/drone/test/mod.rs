@@ -102,8 +102,10 @@ mod tests {
         let (controller_send, controller_recv) = unbounded();
         drone.controller_send = controller_send;
 
+        drone.hunt_mode = true;
+
         match drone.hunt_ghost(2) {
-            Ok(_) => {}
+            Ok(()) => {}
             Err(e) => {
                 panic!("Error: {e}");
             }

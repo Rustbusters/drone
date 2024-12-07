@@ -2,7 +2,6 @@ use super::RustBustersDrone;
 use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::DroneEvent;
-use wg_2024::controller::DroneEvent::ControllerShortcut;
 use wg_2024::network::NodeId;
 use wg_2024::packet::PacketType::MsgFragment;
 use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
@@ -55,7 +54,7 @@ impl RustBustersDrone {
                 self.handle_fragment(&packet, fragment, next_hop, allow_optimized);
             }
             PacketType::Nack(nack) => {
-                if nack.nack_type == NackType::Dropped {
+                if self.hunt_mode && nack.nack_type == NackType::Dropped {
                     info!(
                         "Drone {}: Received Nack with Dropped type. Packet: {:?}",
                         self.id, packet
