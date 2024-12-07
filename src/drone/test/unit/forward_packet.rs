@@ -607,6 +607,52 @@ mod forward {
     }
 
     #[test]
+    fn test_forward_fragment_with_optimized_routing_when_drone_is_destination() {
+        let (mut drone, _, _) = setup_drone();
+        let (neighbor_1_sender, neighbor_1_receiver) = unbounded();
+        drone.packet_send.insert(1, neighbor_1_sender);
+        let (neighbor_3_sender, _neighbor_3_receiver) = unbounded();
+        drone.packet_send.insert(3, neighbor_3_sender);
+
+        drone.set_optimized_routing(true);
+
+        let packet = Packet {
+            pack_type: PacketType::MsgFragment(Fragment {
+                fragment_index: 0,
+                total_n_fragments: 1,
+                data: [0; FRAGMENT_DSIZE],
+                length: FRAGMENT_DSIZE as u8,
+            }),
+            routing_header: SourceRoutingHeader {
+                hop_index: 1,
+                hops: vec![1, drone.id, 3, 6, 7, drone.id],
+            },
+            session_id: 123,
+        };
+
+        drone.forward_packet(packet, false);
+
+        if let Ok(packet) = neighbor_1_receiver.recv_timeout(std::time::Duration::from_secs(1)) {
+            match packet.pack_type {
+                PacketType::Nack(nack) => {
+                    assert_eq!(nack.fragment_index, 0);
+
+                    match nack.nack_type {
+                        NackType::DestinationIsDrone => {
+                            assert_eq!(nack.fragment_index, 0);
+                            assert_eq!(packet.session_id, 123);
+                        }
+                        _ => panic!("Unexpected nack type: {:?}", nack.nack_type),
+                    }
+                }
+                _ => panic!("Unexpected packet: {:?}", packet.pack_type),
+            }
+        } else {
+            panic!("Timeout: no packet received");
+        }
+    }
+
+    #[test]
     fn test_forward_fragment_when_neighbor_channel_closed() {
         let (mut drone, _, _) = setup_drone();
         let (neighbor_1_sender, neighbor_1_receiver) = unbounded();
