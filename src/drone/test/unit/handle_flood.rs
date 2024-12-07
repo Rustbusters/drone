@@ -1,39 +1,11 @@
 #[cfg(test)]
 mod flooding {
-    use crate::RustBustersDrone;
-    use crossbeam_channel::{unbounded, Receiver, Sender};
-    use std::collections::{HashMap, HashSet};
+    use crate::drone::test::common::{setup_drone, UNKNOWN_NODE};
+    use crossbeam_channel::unbounded;
     use wg_2024::controller::DroneEvent;
-    use wg_2024::network::NodeId;
     use wg_2024::network::SourceRoutingHeader;
     use wg_2024::packet::NodeType::{Client, Drone, Server};
     use wg_2024::packet::{FloodRequest, Fragment, Packet, PacketType, FRAGMENT_DSIZE};
-
-    const RB_DRONE_ID: NodeId = 10;
-    const UNKNOWN_NODE: NodeId = 99;
-
-    fn setup_drone() -> (RustBustersDrone, Sender<DroneEvent>, Receiver<DroneEvent>) {
-        let (controller_send, controller_recv) = unbounded();
-        let (_cmd_send, cmd_recv) = unbounded();
-        let (_packet_send_to_drone, packet_recv) = unbounded();
-        let packet_send = HashMap::new();
-
-        let drone = RustBustersDrone {
-            id: RB_DRONE_ID,
-            controller_send: controller_send.clone(),
-            controller_recv: cmd_recv,
-            packet_recv,
-            pdr: 10,
-            packet_send,
-            received_floods: HashSet::default(),
-            optimized_routing: false,
-            running: true,
-            hunt_mode: false,
-            sound_sys: None,
-        };
-
-        (drone, controller_send, controller_recv)
-    }
 
     #[test]
     fn test_flood_response_to_sc_if_neighbor_absent() {

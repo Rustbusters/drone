@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use wg_2024::controller::DroneEvent;
 use wg_2024::network::NodeId;
 
-const RB_DRONE_ID: NodeId = 10;
-const UNKNOWN_NODE: NodeId = 99;
+pub const RB_DRONE_ID: NodeId = 10;
+pub const UNKNOWN_NODE: NodeId = 99;
 
 pub fn setup_drone() -> (RustBustersDrone, Sender<DroneEvent>, Receiver<DroneEvent>) {
     let (controller_send, controller_recv) = unbounded();
