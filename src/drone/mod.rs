@@ -76,7 +76,7 @@ impl Drone for RustBustersDrone {
     fn run(&mut self) {
         info!("Drone {} starting to run.", self.id);
         self.play_sound(SPAWN_SOUND);
-        while self.running {
+        while self.running || !self.packet_recv.is_empty() {
             select_biased! {
                 recv(self.controller_recv) -> command_res => {
                     match command_res {

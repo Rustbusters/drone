@@ -10,6 +10,11 @@ impl RustBustersDrone {
     /// #### Arguments
     /// - `packet`: The `FloodRequest` packet to be handled
     pub fn handle_flood_request(&mut self, packet: Packet) {
+        // If the drone has crashed, the request can be dropped
+        if !self.running {
+            return;
+        }
+
         debug!("Drone {}: Handling FloodRequest", self.id);
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
             let sender_id = if let Some(&(last_node_id, _)) = flood_request.path_trace.last() {

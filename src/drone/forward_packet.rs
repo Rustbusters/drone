@@ -3,6 +3,7 @@ use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::DroneEvent;
 use wg_2024::network::NodeId;
+use wg_2024::packet::PacketType::MsgFragment;
 use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
 
 impl RustBustersDrone {
@@ -11,6 +12,20 @@ impl RustBustersDrone {
     /// - `packet`: The packet to be forwarded
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn forward_packet(&mut self, mut packet: Packet, allow_optimized: bool) {
+        if !self.running {
+            if let MsgFragment(ref frg) = packet.pack_type {
+                self.send_nack(
+                    &packet,
+                    Nack {
+                        fragment_index: frg.fragment_index,
+                        nack_type: NackType::ErrorInRouting(self.id),
+                    },
+                    allow_optimized,
+                );
+                return;
+            }
+        }
+
         trace!("Drone {} forwarding packet: {:?}", self.id, packet);
         let hop_index = packet.routing_header.hop_index;
 
@@ -35,7 +50,7 @@ impl RustBustersDrone {
 
         // Step 5: Proceed based on packet type
         match &packet.pack_type {
-            PacketType::MsgFragment(fragment) => {
+            MsgFragment(fragment) => {
                 self.handle_fragment(&packet, fragment, next_hop, allow_optimized);
             }
             PacketType::Nack(nack) => {
@@ -148,7 +163,7 @@ impl RustBustersDrone {
                 self.id, next_hop
             );
             trace!("Drone {}: Packet: {:?}", self.id, packet);
-            if let PacketType::MsgFragment(frg) = &packet.pack_type {
+            if let MsgFragment(frg) = &packet.pack_type {
                 self.send_nack(
                     packet,
                     Nack {
