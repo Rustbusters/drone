@@ -2,6 +2,7 @@ use super::RustBustersDrone;
 use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::DroneEvent;
+use wg_2024::controller::DroneEvent::ControllerShortcut;
 use wg_2024::network::NodeId;
 use wg_2024::packet::PacketType::MsgFragment;
 use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
@@ -288,7 +289,6 @@ impl RustBustersDrone {
         let next_hop = packet.routing_header.hops[packet.routing_header.hop_index];
 
         // Forward these packets without dropping
-        // TODO: send Ack, Nack and FloodResponse to SC if error. Send Nack to sender if packet is MsgFragment
         if let Some(next_sender) = self.packet_send.get(&next_hop) {
             if let Err(e) = next_sender.send(packet.clone()) {
                 self.packet_send.remove(&next_hop);
@@ -300,6 +300,9 @@ impl RustBustersDrone {
                     "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, next_hop
                 );
+
+                // Take the shortcut to the controller if the neighbor is removed
+                self.send_packet_to_sc(packet.clone());
             } else {
                 info!("Drone {}: Packet forwarded to {}", self.id, next_hop);
             }
@@ -308,13 +311,14 @@ impl RustBustersDrone {
                 "Drone {}: Cannot forward packet, next hop {} is not a neighbor",
                 self.id, next_hop
             );
+            self.send_packet_to_sc(packet.clone());
         }
     }
 
     pub(crate) fn send_packet_to_sc(&mut self, packet: Packet) {
         if self
             .controller_send
-            .send(DroneEvent::ControllerShortcut(packet))
+            .send(ControllerShortcut(packet))
             .is_ok()
         {
             info!("Drone {}: Packet sent to SC", self.id);
