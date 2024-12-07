@@ -1,3 +1,4 @@
+#![allow(unused)]
 use crate::RustBustersDrone;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::collections::HashMap;
