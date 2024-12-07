@@ -32,7 +32,7 @@ mod tests {
             packet_send,
             received_floods: HashSet::default(),
             optimized_routing: false,
-            running: false,
+            running: true,
             hunt_mode: false,
             sound_sys: None,
         }

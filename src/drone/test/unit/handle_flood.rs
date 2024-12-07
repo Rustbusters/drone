@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod flooding {
     use crate::RustBustersDrone;
     use crossbeam_channel::{unbounded, Receiver, Sender};
     use std::collections::{HashMap, HashSet};
@@ -107,6 +107,8 @@ mod tests {
     fn test_no_flood_request_to_unknown_neighbor() {
         // Tests no flood request is sent to an unknown neighbor
         let (mut drone, _, controller_recv) = setup_drone();
+        let (neighbor_1_sender, _neighbor_1_recv) = unbounded();
+        drone.packet_send.insert(1, neighbor_1_sender);
 
         let flood_request = FloodRequest {
             flood_id: 123,
@@ -142,7 +144,16 @@ mod tests {
             path_trace: vec![(1, Client), (drone.id, Drone)],
         };
 
-        drone.spread_flood_request(&flood_request, 42, UNKNOWN_NODE);
+        let packet = Packet {
+            pack_type: PacketType::FloodRequest(flood_request.clone()),
+            routing_header: SourceRoutingHeader {
+                hop_index: 0,
+                hops: vec![],
+            },
+            session_id: 42,
+        };
+
+        drone.handle_flood_request(packet);
 
         assert!(
             controller_recv.try_recv().is_err(),
@@ -171,7 +182,16 @@ mod tests {
             path_trace: vec![(1, Drone)],
         };
 
-        drone.spread_flood_request(&flood_request, 42, 1);
+        let packet = Packet {
+            pack_type: PacketType::FloodRequest(flood_request.clone()),
+            routing_header: SourceRoutingHeader {
+                hop_index: 0,
+                hops: vec![],
+            },
+            session_id: 42,
+        };
+
+        drone.handle_flood_request(packet);
 
         assert!(neighbor_1_recv.try_recv().is_err());
         if let Ok(packet) = neighbor_2_recv.recv_timeout(std::time::Duration::from_secs(1)) {
@@ -394,6 +414,7 @@ mod tests {
 
         let (sender, _receiver) = unbounded();
         drone.packet_send.insert(1, sender);
+        drone.received_floods.insert((123, 1));
 
         let packet = Packet {
             pack_type: PacketType::FloodRequest(FloodRequest {
@@ -407,13 +428,12 @@ mod tests {
             },
             session_id: 4,
         };
-
         drone.handle_flood_request(packet);
 
         // Verify that packet FloodResponse is sent through SC
         if let Ok(event) = controller_recv.recv_timeout(std::time::Duration::from_secs(1)) {
             match event {
-                DroneEvent::PacketSent(packet) => match packet.pack_type {
+                DroneEvent::ControllerShortcut(packet) => match packet.pack_type {
                     PacketType::FloodResponse(response) => {
                         assert_eq!(response.flood_id, 123);
                         assert_eq!(
