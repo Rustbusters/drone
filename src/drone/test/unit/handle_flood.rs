@@ -371,7 +371,7 @@ mod flooding {
             "No events should be sent to the controller for an invalid packet type"
         );
 
-        // Validate that no packets were sent to any neighbors
+        // Validate that no packets were sent to any neighbors // TODO: check this
         assert!(
             drone.packet_send.is_empty(),
             "No packets should be sent to neighbors for an invalid packet type"
