@@ -22,8 +22,10 @@ impl RustBustersDrone {
             DroneCommand::Crash => {
                 info!("Drone {}: Received Crash command. Shutting down.", self.id);
                 self.play_sound(CRASH_SOUND);
-                // Wait for the sound to finish playing
-                sleep(Duration::from_millis(1500));
+                if self.sound_sys.is_some() {
+                    // Wait for the sound to finish playing
+                    sleep(Duration::from_millis(1500));
+                }
                 self.running = false;
             }
             DroneCommand::AddSender(node_id, sender) => {
