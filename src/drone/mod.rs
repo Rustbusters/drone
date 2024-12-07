@@ -24,7 +24,7 @@ pub struct RustBustersDrone {
     packet_recv: Receiver<Packet>,
     pdr: u8, // Packet Drop Rate in percentage (0-100)
     packet_send: HashMap<NodeId, Sender<Packet>>,
-    received_floods: HashSet<u64>,
+    received_floods: HashSet<(u64, NodeId)>, // flood_id, initiator_id
     optimized_routing: bool,
     running: bool,
     hunt_mode: bool,

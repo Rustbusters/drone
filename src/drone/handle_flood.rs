@@ -25,7 +25,10 @@ impl RustBustersDrone {
             // Add self to path_trace
             flood_request.path_trace.push((self.id, NodeType::Drone));
 
-            if self.received_floods.contains(&flood_request.flood_id) {
+            if self
+                .received_floods
+                .contains(&(flood_request.flood_id, flood_request.initiator_id))
+            {
                 self.send_flood_response(&flood_request, packet.session_id, sender_id);
             } else {
                 self.spread_flood_request(&flood_request, packet.session_id, sender_id);
@@ -122,7 +125,8 @@ impl RustBustersDrone {
             "Drone {}: Processing new flood_id {}",
             self.id, flood_request.flood_id
         );
-        self.received_floods.insert(flood_request.flood_id);
+        self.received_floods
+            .insert((flood_request.flood_id, flood_request.initiator_id));
         // Collect neighbor IDs and Senders into a separate vector (excluding the sender)
         let neighbors: Vec<(NodeId, Sender<Packet>)> = self
             .packet_send
