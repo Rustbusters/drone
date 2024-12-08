@@ -101,23 +101,27 @@ impl RustBustersDrone {
                     self.id, flood_request.flood_id, sender_id, e
                 );
                 warn!(
-                    "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
-                    self.id, sender_id
+                    "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
+                    self.id,
+                    sender_id
                 );
 
                 self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
             } else {
                 info!(
-                    "Drone {}: FloodResponse({}) sent to {}",
-                    self.id, flood_request.flood_id, sender_id
+                    "Drone {} - Sent FloodResponse(flood_id={}, sender_id={})",
+                    self.id,
+                    flood_request.flood_id,
+                    sender_id
                 );
 
                 self.send_to_sc(DroneEvent::PacketSent(response_packet));
             }
         } else {
             warn!(
-                "Drone {}: Sender {} not found in packet_send.",
-                self.id, sender_id
+                "Drone {} - Not found Sender {} in packet_send",
+                self.id,
+                sender_id
             );
 
             self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
@@ -184,13 +188,17 @@ impl RustBustersDrone {
                     self.id, flood_request.flood_id, neighbor_id, e
                 );
                 warn!(
-                    "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
-                    self.id, neighbor_id
+                    "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
+                    self.id,
+                    neighbor_id
                 );
             } else {
                 info!(
-                    "Drone {}: FloodRequest({}) forwarded to {}",
-                    self.id, flood_request.flood_id, neighbor_id
+                    "Drone {} - Forwarded FloodRequest(flood_id={}, sender_id={}) to neighbor: {}",
+                    self.id,
+                    flood_request.flood_id,
+                    sender_id,
+                    neighbor_id
                 );
             }
         }

@@ -56,7 +56,10 @@ impl Drone for RustBustersDrone {
         packet_send: HashMap<NodeId, Sender<Packet>>,
         pdr: f32,
     ) -> Self {
-        info!("Initializing drone with ID {}", id);
+        info!(
+            "Start - Initializing drone with ID {}",
+            id
+        );
         Self {
             id,
             controller_send,
@@ -74,7 +77,10 @@ impl Drone for RustBustersDrone {
 
     /// Runs the drone
     fn run(&mut self) {
-        info!("Drone {} starting to run.", self.id);
+        info!(
+            "Run - Starting to run drone with ID {}",
+            self.id
+        );
         self.play_sound(SPAWN_SOUND);
         while self.running || !self.packet_recv.is_empty() {
             select_biased! {
@@ -89,7 +95,11 @@ impl Drone for RustBustersDrone {
                             self.handle_command(command);
                         }
                         Err(e) => {
-                            warn!("Drone {} controller receive error: {}", self.id, e);
+                            warn!(
+                                "Drone {} - Error in receiving controller DroneCommand: {}",
+                                self.id,
+                                e
+                            );
                         }
                     }
                 },
@@ -103,13 +113,20 @@ impl Drone for RustBustersDrone {
                             }
                         }
                         Err(e) => {
-                            warn!("Drone {} packet receive error: {}", self.id, e);
+                            warn!(
+                                "Drone {} - Error in receiving Packet: {}",
+                                self.id,
+                                e
+                            );
                         }
                     }
                 },
             }
         }
-        info!("Drone {} has stopped running.", self.id);
+        info!(
+            "Stop - Stopped running drone with ID {}",
+            self.id
+        );
     }
 }
 
@@ -146,9 +163,15 @@ impl RustBustersDrone {
     pub fn enable_sound(&mut self) {
         if let Ok((stream, handle)) = OutputStream::try_default() {
             self.sound_sys = Some((stream, handle));
-            info!("Drone {}: Sound system enabled", self.id);
+            info!(
+                "Drone {} - Sound system enabled",
+                self.id
+            );
         } else {
-            warn!("Drone {}: Error enabling sound system", self.id);
+            warn!(
+                "Drone {} - Error in enabling sound system",
+                self.id
+            );
         }
     }
 }

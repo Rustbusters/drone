@@ -18,10 +18,14 @@ impl RustBustersDrone {
                     sink.append(source);
                     sink.detach();
                 } else {
-                    warn!("Errore: impossibile decodificare il file audio.");
+                    warn!(
+                        "Error - Failed to decoded audio file"
+                    );
                 }
             } else {
-                warn!("Errore: impossibile creare il sink audio.");
+                warn!(
+                    "Error - Failed to create audio sink"
+                );
             }
         }
     }

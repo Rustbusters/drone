@@ -75,16 +75,21 @@ impl RustBustersDrone {
                 self.packet_send.remove(&next_hop);
                 self.send_to_sc(ControllerShortcut(nack_packet));
                 warn!(
-                    "Drone {}: Neighbor {} has been removed from packet_send due to channel closure",
+                    "Drone {} - Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, next_hop
                 );
             } else {
-                info!("Drone {}: Nack sent to {}", self.id, next_hop);
+                info!(
+                    "Drone {} - Forwarded Nack to next hop: {}",
+                    self.id,
+                    next_hop
+                );
             }
         } else {
             warn!(
-                "Drone {}: Cannot send Nack, next hop {} is not a neighbor",
-                self.id, next_hop
+                "Drone {} - Unable to send Nack: next hop {} is not a neighbor",
+                self.id,
+                next_hop
             );
             trace!("Drone {}: Nack packet: {:?}", self.id, nack_packet);
             self.send_to_sc(ControllerShortcut(nack_packet));
