@@ -76,6 +76,48 @@ mod flooding {
     }
 
     #[test]
+    fn test_no_flood_request_when_drone_crashed() {
+        // Tests no flood request is sent to an unknown neighbor
+        let (mut drone, _, controller_recv) = setup_drone();
+        let (neighbor_1_sender, neighbor_1_recv) = unbounded();
+        drone.packet_send.insert(1, neighbor_1_sender);
+        let (neighbor_3_sender, neighbor_3_recv) = unbounded();
+        drone.packet_send.insert(3, neighbor_3_sender);
+
+        drone.running = false;
+
+        let flood_request = FloodRequest {
+            flood_id: 123,
+            initiator_id: 1,
+            path_trace: vec![(1, Server), (drone.id, Drone)],
+        };
+
+        drone.handle_flood_request(Packet {
+            pack_type: PacketType::FloodRequest(flood_request.clone()),
+            routing_header: SourceRoutingHeader {
+                hop_index: 0,
+                hops: vec![],
+            },
+            session_id: 42,
+        });
+
+        assert!(
+            neighbor_1_recv.try_recv().is_err(),
+            "No flood request should be sent to neighbor 1"
+        );
+
+        assert!(
+            neighbor_3_recv.try_recv().is_err(),
+            "No flood request should be sent to neighbor 3"
+        );
+
+        assert!(
+            controller_recv.try_recv().is_err(),
+            "No event should be sent to the SC"
+        );
+    }
+
+    #[test]
     fn test_no_flood_request_to_unknown_neighbor() {
         // Tests no flood request is sent to an unknown neighbor
         let (mut drone, _, controller_recv) = setup_drone();
