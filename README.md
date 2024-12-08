@@ -2,7 +2,7 @@
 
 The `RustBustersDrone` is a software-defined drone designed to work in a distributed network simulation.
 It was developed for the Advanced Programming course 2024 at the University of Trento.
-It provides robust capabilities for handling packet routing, communication, and control commands.
+It provides robust capabilities for packet handling, flood management and control commands.
 
 ## Basic drone features
 
@@ -23,7 +23,7 @@ These features are the one standardized for every single drone implementation.
 
 ### **Control Commands**
 
-- **Crash**: Stops the drone's operations gracefully.
+- **Crash**: Stops the drone's operations.
 - **Add Sender**: Dynamically adds communication channels for new neighbors.
 - **Set Packet Drop Rate**: Configures the PDR dynamically to test network resilience.
 
@@ -31,11 +31,10 @@ These features are the one standardized for every single drone implementation.
 
 ### **Optimized path 🛣️**
 
-The drone optimizes routes by removing unnecessary hops for `Nack`s and `FloodResponse`s.
+The drone optimizes routes by removing unnecessary hops for `Ack`s, `Nack`s and `FloodResponse`s.
 
-#### Optimization Process
+#### Example Scenario
 
-Example Scenario:
 - Route: `[1, 2, 3, 4, 5, 6]`
 - Current drone: `2` 
 - Received a `Nack` from drone `1`. 
@@ -51,7 +50,7 @@ This ensures efficient path analysis and reduced hops where possible.
 
 So in our example (we're on drone `2`):
 - Analyze `6`, not neighbor.
-- Analyze `5`, neighbor and thus skip the hops `2`-`3`, `3`-`4`, `4`-`5`
+- Analyze `5`, neighbor and thus skip the edges `2`-`3`, `3`-`4`, `4`-`5`
 - Attach `2` to `[5,6]`
 - The whole route becomes `[1,2,5,6]`
 
@@ -67,18 +66,18 @@ drone.set_optimized_routing(false); // disables optimized routing
 
 ### **Ghost hunter 👻**
 
-The `hunt` command allows a `RustBustersDrone` or **hunter** to eliminate a non-`RustBustersDrone` or **ghost drone** 
+The `hunt` command allows a `RustBustersDrone` or **hunter drone** to eliminate a **ghost drone** 
 from the network via a request to the **Simulation Controller**.\
 This is how it works:
 
-1. The `RustBustersDrone` receives a `Nack` `Dropped` packet from another drone.
-2. The `RustBustersDrone` sends a `HuntPacket` to the simulation controller to eliminate the drone it received the `Nack` from.
+1. The `RustBustersDrone` receives a `Nack::Dropped` packet from another drone.
+2. The `RustBustersDrone` sends a **hunt** `Packet` to the simulation controller to eliminate the drone it received the `Nack` from.
 3. The Simulation Controller receives the packet, processes it and makes the following controls:
-    - If the drone is not a `RustBustersDrone` and if the network isn't partitioned after the drone removal, then a `Crash` command is sent to the drone.
+    - If the network isn't partitioned after the drone removal, then a `Crash` command is sent to the drone.
     - Otherwise, the command is canceled and the `hunt` initiator is notified with an `Err`.
 
 
-![image info](./assets/figure.jpg)
+![image info](./assets/ghost-hunter.jpg)
 
 Code example for setting the hunt mode:
 
@@ -91,7 +90,7 @@ drone.set_hunt_mode(false); // disables hunt mode
 #### Hunter Drone to Simulation Controller
 
 This feature of the drone uses the same `Packet` structure as the one specified in the protocol standard.\
-The only thing that changes is the encoding. The `HuntPacket` looks like this:
+The only thing that changes is the encoding. The **hunt** `Packet` looks like this:
 
 ```rust
 pub const PACKET_CONST: u8 = 169;
@@ -133,6 +132,21 @@ The Simulation Controller is asked to:
 A code example can look like this:
 
 ```rust
+use drone::hunt::PACKET_CONST;
+
+fn handle_drone_commands(packet: Packet) {
+    match &packet.pack_type {
+        PacketType::MsgFragment(fragment) => {
+            // Hunt Packet
+            if fragment.fragment_index == 0 && fragment.total_n_fragments == 0 && fragment.length == PACKET_CONST {
+                let target_node_id = fragment.data[1];
+                handle_hunt(simulation_controller, target_node_id);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn handle_hunt(simulation_controller: &mut RustBustersSimulationController, target_drone_id: NodeId) -> Result<(), String> {
     // Try to remove node
     simulation_controller.graph.remove_node(target_drone_id);
@@ -165,11 +179,16 @@ fn is_network_connected(simulation_controller: &RustBustersSimulationController)
 
 Our magnificent drone allows to reproduce sounds based on the packets received by the drone:
 
-- **Start**: When the drone `start`s it reproduces the **“YAHOO”** Mario sound 🍄.
-- **Nack**: Whenever the Rusbusters drone produces a `Nack` that is **not a `Dropped`** it plays a **"Windows Error"** sound 🪟.
-- **Hunt Mode**: On `Nack` receipt the drone activates the ghost hunter mode and reproduces a **“PIUPIUPIU”** sound 🔫 (like Colt from Brawl Stars).
-- **Crash**: Whenever the Rusbusters drone receives a `Crash` command from the mighty Simulation Controller the drone plays a **"Windows Shut Down"** sound 🪟.
-- **Dropped**: On packet `Nack` `Dropped` the drone plays a **“QUACK”** sound 🦆 and proceeds with the drop of the packet.
+- **Start**: When the drone `start`s it reproduces the **“YAHOO”** Mario sound 🍄.\
+    <img src="./assets/1.jpg" width="508" height="400">
+- **Nack**: Whenever the Rusbusters drone produces a `Nack` that is **not a `Dropped`** it plays the **"Windows Error"** sound 🪟.\
+  <img src="./assets/2.jpg" width="508" height="400">
+- **Hunt Mode**: On `Nack` receipt the drone activates the ghost hunter mode and reproduces the **“PIUPIUPIU”** sound 🔫 (like Colt from Brawl Stars).\
+  <img src="./assets/3.jpg" width="508" height="400">
+- **Crash**: Whenever the Rusbusters drone receives a `Crash` command from the mighty Simulation Controller the drone plays the **"Windows Shut Down"** sound 🪟.\
+  <img src="./assets/4.jpg" width="508" height="400">
+- **Dropped**: On packet `Nack` `Dropped` the drone plays the original **Marco Patrignani “QUACK”** sound 🦆 and proceeds with the drop of the packet.\
+  <img src="./assets/5.jpg" width="508" height="400">
 
 Code example for activating sounds:
 
@@ -192,17 +211,17 @@ QR code:
 
 Don't hesitate if you have issues, our group is here to help.
 
+### **Strong Unit/Integration Tests 🧪**
+
+Our drone also provides a whole bunch of strong unit and integration tests that cover almost 80% of the code.\
+However, if we consider only the features relevant to **packet handling**, **flood management** and **control commands** the **coverage** goes up to **90%**.
+
+<img src="./assets/test-coverage.png" width="952">
 
 ### **Event Logging ✏️**
 
 Our drone provides comprehensive logging with levels: `debug`, `info`, `warn`, `error`, and `trace` for detailed runtime
 monitoring and troubleshooting.
-
-
-### **Strong Unit/Integration Tests 🧪**
-
-Our drone implements a complete suite of features standardized by the protocol.
-It also provides a whole bunch of strong unit and integration tests.
 
 ## Configurable Options
 
