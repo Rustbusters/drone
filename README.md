@@ -31,13 +31,13 @@ These features are the one standardized for every single drone implementation.
 
 ### **Optimized path 🛣️**
 
-The drone optimizes routes by removing unnecessary hops for `Ack`s, `Nack`s and `FloodResponse`s.
+The drone optimizes routes by removing unnecessary hops for `Nack`s and `FloodResponse`s.
 
 #### Example Scenario
 
 - Route: `[1, 2, 3, 4, 5, 6]`
 - Current drone: `2` 
-- Received a `Nack` from drone `1`. 
+- Received a `Nack`/`FloodResponse` from drone `1`. 
 - Neighbors of `2`: `1`, `3`, and `5`. 
 
 #### Algorithm Steps
