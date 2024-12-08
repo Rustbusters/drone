@@ -11,7 +11,11 @@ impl RustBustersDrone {
     /// - `packet`: The packet to be forwarded
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn forward_packet(&mut self, mut packet: Packet, allow_optimized: bool) {
-        trace!("Drone {} forwarding packet: {:?}", self.id, packet);
+        trace!(
+            "Drone {} - Forwarding packet: {:?}",
+            self.id,
+            packet
+        );
         let hop_index = packet.routing_header.hop_index;
 
         // Step 1: Check if hops[hop_index] matches self.id
@@ -184,7 +188,11 @@ impl RustBustersDrone {
                 self.id,
                 next_hop
             );
-            trace!("Drone {}: Packet: {:?}", self.id, packet);
+            trace!(
+                "Drone {} - Packet: {:?}",
+                self.id,
+                packet
+            );
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 self.send_nack(
                     packet,

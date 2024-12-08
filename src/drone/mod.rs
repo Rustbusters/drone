@@ -106,7 +106,11 @@ impl Drone for RustBustersDrone {
                 recv(self.packet_recv) -> packet_res => {
                     match packet_res {
                         Ok(packet) => {
-                            trace!("Drone {} received packet: {:?}", self.id, packet);
+                            trace!(
+                                "Drone {} - Received packet: {:?}",
+                                self.id,
+                                packet
+                            );
                             match packet.pack_type {
                                 PacketType::FloodRequest(_) => self.handle_flood_request(packet),
                                 _ => self.forward_packet(packet, true),

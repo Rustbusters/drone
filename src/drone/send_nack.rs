@@ -93,7 +93,11 @@ impl RustBustersDrone {
                 self.id,
                 next_hop
             );
-            trace!("Drone {}: Nack packet: {:?}", self.id, nack_packet);
+            trace!(
+                "Drone {} - Nack Packet: {:?}",
+                self.id,
+                nack_packet
+            );
             self.send_to_sc(ControllerShortcut(nack_packet));
         }
     }
