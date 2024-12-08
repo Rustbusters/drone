@@ -14,7 +14,7 @@ impl RustBustersDrone {
     /// - `nack`: The Nack to be sent
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn send_nack(&mut self, packet: &Packet, nack: Nack, allow_optimized: bool) {
-        debug!("Drone {}: Sending Nack: {:?}", self.id, nack);
+        debug!("[DEBUG]Drone {}: Sending Nack: {:?}", self.id, nack);
         let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone
         let nack_type = nack.nack_type;
 
