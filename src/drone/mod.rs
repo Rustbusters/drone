@@ -81,7 +81,11 @@ impl Drone for RustBustersDrone {
                 recv(self.controller_recv) -> command_res => {
                     match command_res {
                         Ok(command) => {
-                            debug!("Drone {} received command: {:?}", self.id, command);
+                            debug!(
+                                "Drone {} - Received command: {:?}",
+                                self.id,
+                                command
+                            );
                             self.handle_command(command);
                         }
                         Err(e) => {
@@ -116,9 +120,11 @@ impl RustBustersDrone {
     /// - `optimized_routing`: The value to set the `optimized_routing` field to
     pub fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
+        let optimized_routing_state = if self.hunt_mode { String::from("enabled") } else { String::from("disabled") };
         debug!(
-            "Drone {}: Set optimized routing to {}",
-            self.id, optimized_routing
+            "Drone {} - Optimized routing {}",
+            self.id,
+            optimized_routing_state
         );
     }
 
@@ -128,7 +134,12 @@ impl RustBustersDrone {
     /// - `hunt_mode`: The value to set the `hunt_mode` field to
     pub fn set_hunt_mode(&mut self, hunt_mode: bool) {
         self.hunt_mode = hunt_mode;
-        debug!("Drone {}: Set hunt mode to {}", self.id, hunt_mode);
+        let hunt_mode_state = if self.hunt_mode { String::from("enabled") } else { String::from("disabled") };
+        debug!(
+            "Drone {} - Hunt mode {}",
+            self.id,
+            hunt_mode_state
+        );
     }
 
     /// Enables the sound system for the drone

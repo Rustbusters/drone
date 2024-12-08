@@ -16,13 +16,16 @@ impl RustBustersDrone {
             return;
         }
 
-        debug!("Drone {}: Handling FloodRequest", self.id);
+        debug!(
+            "Drone {} - Received FloodRequest",
+            self.id
+        );
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
             let sender_id = if let Some(&(last_node_id, _)) = flood_request.path_trace.last() {
                 last_node_id
             } else {
                 error!(
-                    "Drone {}: Error: path_trace is empty in handle_flood",
+                    "Drone {} - path_trace is empty in handle_flood",
                     self.id
                 );
                 flood_request.initiator_id
@@ -60,8 +63,10 @@ impl RustBustersDrone {
         sender_id: NodeId,
     ) {
         debug!(
-            "Drone {}: Already received flood_id {}",
-            self.id, flood_request.flood_id
+            "Drone {} - Already processed FloodRequest(flood_id={}, sender_id={})",
+            self.id,
+            flood_request.flood_id,
+            sender_id
         );
         // Send FloodResponse back to sender
         let response = FloodResponse {
@@ -134,8 +139,10 @@ impl RustBustersDrone {
         sender_id: NodeId,
     ) {
         debug!(
-            "Drone {}: Processing new flood_id {}",
-            self.id, flood_request.flood_id
+            "Drone {} - FloodRequest(flood_id={}, sender_id={}) is being processed",
+            self.id,
+            flood_request.flood_id,
+            sender_id
         );
         self.received_floods
             .insert((flood_request.flood_id, flood_request.initiator_id));
@@ -149,8 +156,10 @@ impl RustBustersDrone {
 
         if neighbors.is_empty() {
             debug!(
-                "Drone {}: No neighbors to forward FloodRequest({}) to",
-                self.id, flood_request.flood_id
+                "Drone {} - No neighbors to forward FloodRequest(flood_id={}, sender_id={}) to",
+                self.id,
+                flood_request.flood_id,
+                sender_id
             );
             self.send_flood_response(flood_request, session_id, sender_id);
 
