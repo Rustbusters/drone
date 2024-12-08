@@ -75,7 +75,7 @@ impl RustBustersDrone {
             }
             PacketType::FloodRequest(_) => {
                 error!(
-                    "Drone {}: Received FloodRequest in forward_packet, which should be handled in handle_flood.",
+                    "Drone {} - Received FloodRequest in forward_packet: should be handled in handle_flood",
                     self.id
                 );
             }
@@ -240,8 +240,9 @@ impl RustBustersDrone {
                 .send(DroneEvent::PacketDropped(packet.clone()))
             {
                 error!(
-                    "Drone {}: Error sending PacketDropped event: {}",
-                    self.id, e
+                    "Drone {} - Error in sending DroneEvent::PacketDropped event: {}",
+                    self.id,
+                    e
                 );
             }
             return;
@@ -261,8 +262,10 @@ impl RustBustersDrone {
                     allow_optimized,
                 );
                 error!(
-                    "Drone {}: Error sending packet to {}: {}",
-                    self.id, next_hop, err
+                    "Drone {} - Error in sending packet to {}: {}",
+                    self.id,
+                    next_hop,
+                    err
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -275,7 +278,11 @@ impl RustBustersDrone {
                     .controller_send
                     .send(DroneEvent::PacketSent(packet.clone()))
                 {
-                    error!("Drone {}: Error sending PacketSent event: {}", self.id, e);
+                    error!(
+                        "Drone {} - Error in sending DroneEvent::PacketSent event: {}",
+                        self.id,
+                        e
+                    );
                 } else {
                     info!(
                         "Drone {} - Forwarded Packet to next hop: {}",
@@ -325,8 +332,10 @@ impl RustBustersDrone {
             if let Err(e) = next_sender.send(packet.clone()) {
                 self.packet_send.remove(&next_hop);
                 error!(
-                    "Drone {}: Error sending packet to {}: {}",
-                    self.id, next_hop, e
+                    "Drone {} - Error in sending Packet to {}: {}",
+                    self.id,
+                    next_hop,
+                    e
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -360,7 +369,10 @@ impl RustBustersDrone {
                 self.id
             );
         } else {
-            error!("Drone {}: Error sending event to SC", self.id);
+            error!(
+                "Drone {} - Error in sending event to SC",
+                self.id
+            );
         }
     }
 }

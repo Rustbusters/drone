@@ -44,7 +44,7 @@ impl RustBustersDrone {
             }
         } else {
             error!(
-                "Drone {}: Expected FloodRequest, but got different packet type.",
+                "Drone {} - Expected FloodRequest, but got different packet type.",
                 self.id
             );
         }
@@ -97,8 +97,11 @@ impl RustBustersDrone {
             if let Err(e) = sender.send(response_packet.clone()) {
                 self.packet_send.remove(&sender_id);
                 error!(
-                    "Drone {}: Error sending FloodResponse({}) to {}: {}",
-                    self.id, flood_request.flood_id, sender_id, e
+                    "Drone {} - Error in sending FloodResponse(flood_id={}, sender_id={}): {}",
+                    self.id,
+                    flood_request.flood_id,
+                    sender_id,
+                    e
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -184,8 +187,12 @@ impl RustBustersDrone {
                 // Remove the neighbor from packet_send
                 self.packet_send.remove(&neighbor_id);
                 error!(
-                    "Drone {}: Error sending FloodRequest({}) to {}: {}",
-                    self.id, flood_request.flood_id, neighbor_id, e
+                    "Drone {} - Error in sending FloodRequest(flood_id={}, sender_id={}) to {}: {}",
+                    self.id,
+                    flood_request.flood_id,
+                    sender_id,
+                    neighbor_id,
+                    e
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",

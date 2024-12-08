@@ -24,7 +24,7 @@ impl RustBustersDrone {
 
         if hop_index == 0 || hop_index >= packet.routing_header.hops.len() {
             error!(
-                "Drone {}: Error: hop_index out of range in nack {:?}",
+                "Drone {} - hop_index out of range in Nack {:?}",
                 self.id, nack
             );
             return;
@@ -69,8 +69,10 @@ impl RustBustersDrone {
         if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {
             if let Err(e) = next_sender.send(nack_packet.clone()) {
                 error!(
-                    "Drone {}: Error sending Nack to {}: {}",
-                    self.id, next_hop, e
+                    "Drone {} - Error in sending Nack to {}: {}",
+                    self.id,
+                    next_hop,
+                    e
                 );
                 self.packet_send.remove(&next_hop);
                 self.send_to_sc(ControllerShortcut(nack_packet));
