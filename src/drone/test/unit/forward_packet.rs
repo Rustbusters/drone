@@ -379,7 +379,7 @@ mod forward {
     }
 
     #[test]
-    fn test_forward_nack_ack_or_flood_response_with_optimized_routing() {
+    fn test_forward_nack_or_flood_response_with_optimized_routing() {
         let (mut drone, _, _) = setup_drone();
         let (neighbor_1_sender, _neighbor_1_receiver) = unbounded();
         drone.packet_send.insert(1, neighbor_1_sender);
@@ -391,7 +391,10 @@ mod forward {
         drone.set_optimized_routing(true);
 
         let packet = Packet {
-            pack_type: PacketType::Ack(wg_2024::packet::Ack { fragment_index: 0 }),
+            pack_type: PacketType::Nack(Nack {
+                fragment_index: 0,
+                nack_type: NackType::DestinationIsDrone,
+            }),
             routing_header: SourceRoutingHeader {
                 hop_index: 1,
                 hops: vec![1, drone.id, 3, 6, 7, 4, 5],
@@ -403,8 +406,9 @@ mod forward {
 
         if let Ok(packet) = neighbor_4_receiver.recv_timeout(std::time::Duration::from_secs(1)) {
             match packet.pack_type {
-                PacketType::Ack(ack) => {
-                    assert_eq!(ack.fragment_index, 0);
+                PacketType::Nack(nack) => {
+                    assert_eq!(nack.fragment_index, 0);
+                    assert_eq!(nack.nack_type, NackType::DestinationIsDrone);
                     assert_eq!(packet.session_id, 123);
                 }
                 _ => panic!("Unexpected packet: {:?}", packet.pack_type),
@@ -416,6 +420,40 @@ mod forward {
         assert!(neighbor_3_receiver
             .recv_timeout(std::time::Duration::from_secs(1))
             .is_err());
+    }
+
+    #[test]
+    fn test_forward_ack_with_optimized_routing() {
+        let (mut drone, _, _) = setup_drone();
+        let (neighbor_1_sender, _neighbor_1_receiver) = unbounded();
+        drone.packet_send.insert(1, neighbor_1_sender);
+        let (neighbor_3_sender, neighbor_3_receiver) = unbounded();
+        drone.packet_send.insert(3, neighbor_3_sender);
+
+        drone.set_optimized_routing(true);
+
+        let packet = Packet {
+            pack_type: PacketType::Ack(Ack { fragment_index: 0 }),
+            routing_header: SourceRoutingHeader {
+                hop_index: 1,
+                hops: vec![1, drone.id, 3, 6, 7, 4, 5],
+            },
+            session_id: 123,
+        };
+
+        drone.forward_packet(packet, false);
+
+        if let Ok(packet) = neighbor_3_receiver.recv_timeout(std::time::Duration::from_secs(1)) {
+            match packet.pack_type {
+                PacketType::Ack(ack) => {
+                    assert_eq!(ack.fragment_index, 0);
+                    assert_eq!(packet.session_id, 123);
+                }
+                _ => panic!("Unexpected packet: {:?}", packet.pack_type),
+            }
+        } else {
+            panic!("Timeout: no packet received");
+        }
     }
 
     #[test]

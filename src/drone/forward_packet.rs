@@ -3,7 +3,6 @@ use log::{error, info, trace, warn};
 use rand::Rng;
 use wg_2024::controller::DroneEvent;
 use wg_2024::network::NodeId;
-use wg_2024::packet::PacketType::MsgFragment;
 use wg_2024::packet::{Fragment, Nack, NackType, Packet, PacketType};
 
 impl RustBustersDrone {
@@ -25,7 +24,7 @@ impl RustBustersDrone {
 
         // Step "2.1": Check if the drone is running, if not send ErrorInRouting
         if !self.running {
-            if let MsgFragment(ref frg) = packet.pack_type {
+            if let PacketType::MsgFragment(ref frg) = packet.pack_type {
                 self.send_nack(
                     &packet,
                     Nack {
@@ -51,7 +50,7 @@ impl RustBustersDrone {
 
         // Step 5: Proceed based on packet type
         match &packet.pack_type {
-            MsgFragment(fragment) => {
+            PacketType::MsgFragment(fragment) => {
                 self.handle_fragment(&packet, fragment, next_hop, allow_optimized);
             }
             PacketType::Nack(nack) => {
@@ -99,7 +98,7 @@ impl RustBustersDrone {
                 "Drone {}: Unexpected recipient. Expected {}, got {}",
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
-            if let MsgFragment(frg) = &packet.pack_type {
+            if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 if let Some(pos) = packet
                     .routing_header
                     .hops
@@ -175,7 +174,7 @@ impl RustBustersDrone {
                 self.id, next_hop
             );
             trace!("Drone {}: Packet: {:?}", self.id, packet);
-            if let MsgFragment(frg) = &packet.pack_type {
+            if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 self.send_nack(
                     packet,
                     Nack {
@@ -288,14 +287,19 @@ impl RustBustersDrone {
 
     pub(crate) fn forward_other_packet(&mut self, packet: &mut Packet) {
         if self.optimized_routing {
-            let (prev_hops, next_hops) = packet
-                .routing_header
-                .hops
-                .split_at_mut(packet.routing_header.hop_index - 1);
-            let mut optimized_next_hops = self.optimize_route(next_hops);
+            match &packet.pack_type {
+                PacketType::FloodResponse(_) | PacketType::Nack(_) => {
+                    let (prev_hops, next_hops) = packet
+                        .routing_header
+                        .hops
+                        .split_at_mut(packet.routing_header.hop_index - 1);
+                    let mut optimized_next_hops = self.optimize_route(next_hops);
 
-            packet.routing_header.hops = prev_hops.to_vec();
-            packet.routing_header.hops.append(&mut optimized_next_hops);
+                    packet.routing_header.hops = prev_hops.to_vec();
+                    packet.routing_header.hops.append(&mut optimized_next_hops);
+                }
+                _ => {}
+            }
         }
         let next_hop = packet.routing_header.hops[packet.routing_header.hop_index];
 
