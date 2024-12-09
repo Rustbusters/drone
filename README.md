@@ -50,7 +50,7 @@ This ensures efficient path analysis and reduced hops where possible.
 
 So in our example (we're on drone `2`):
 - Analyze `6`, not neighbor.
-- Analyze `5`, neighbor and thus skip the edges `2`-`3`, `3`-`4`, `4`-`5`
+- Analyze `5`, neighbor and thus skip the edges `2-3`, `3-4`, `4-5`
 - Attach `2` to `[5,6]`
 - The whole route becomes `[1,2,5,6]`
 
@@ -73,8 +73,8 @@ This is how it works:
 1. The `RustBustersDrone` receives a `Nack::Dropped` packet from another drone.
 2. The `RustBustersDrone` sends a **hunt** `Packet` to the simulation controller to eliminate the drone it received the `Nack` from.
 3. The Simulation Controller receives the packet, processes it and makes the following controls:
-    - If the network isn't partitioned after the drone removal and it's not a Rustbusters drone, then a `Crash` command is sent to the drone.
-    - Otherwise, the command is canceled and the `hunt` initiator is notified with an `Err`.
+    - If the network isn't partitioned after the drone removal and if the target is not a Rustbusters drone, then a `Crash` command is sent to the drone.
+    - Otherwise, the operation is aborted.
 
 
 ![image info](./assets/ghost-hunter.jpg)
@@ -123,6 +123,8 @@ self.controller_send.send(hunt_node_event)
 
 #### Simulation Controller to Ghost Drone
 
+> The following instructions are for the member that implements the Simulation Controller.
+
 The Simulation Controller is asked to:
 
 1. Implement a handler for the hunt packet.
@@ -163,13 +165,14 @@ fn handle_hunt(simulation_controller: &mut RustBustersSimulationController, targ
         }
     } else {
         // Abort operation, reestablish previous topology by readding the removed drone and send error
+        // RESET the graph to the original state
         Err("Cannot guarantee network integrity. Aborting hunt.".to_string())
     }
 }
 
 fn is_network_connected(simulation_controller: &RustBustersSimulationController) -> bool {
     // Verify graph integrity
-    unimplemented!()
+    unimplemented!() // Implement your own network integrity check
 }
 ```
 
@@ -225,8 +228,6 @@ monitoring and troubleshooting.
 
 ## Configurable Options
 
-- **Node ID**: Unique identifier for the drone.
-- **Packet Drop Rate (PDR)**: Probability of dropping packets (0-100%).
 - **Optimized Routing**: Toggle for enabling route optimization.
 - **Hunt Mode**: Toggle for enabling hunt mode.
 - **Sounds**: Toggle for enabling sounds.
