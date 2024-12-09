@@ -17,6 +17,8 @@ use wg_2024::drone::Drone;
 use wg_2024::network::NodeId;
 use wg_2024::packet::{Packet, PacketType};
 
+pub trait IsRustBustersDrone {}
+
 pub struct RustBustersDrone {
     id: NodeId,
     controller_send: Sender<DroneEvent>,
