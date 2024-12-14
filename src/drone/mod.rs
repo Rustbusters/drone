@@ -19,6 +19,8 @@ use wg_2024::packet::{Packet, PacketType};
 
 pub trait IsRustBustersDrone {}
 
+impl IsRustBustersDrone for RustBustersDrone {}
+
 pub struct RustBustersDrone {
     id: NodeId,
     controller_send: Sender<DroneEvent>,
@@ -58,10 +60,7 @@ impl Drone for RustBustersDrone {
         packet_send: HashMap<NodeId, Sender<Packet>>,
         pdr: f32,
     ) -> Self {
-        info!(
-            "Start - Initializing drone with ID {}",
-            id
-        );
+        info!("Start - Initializing drone with ID {}", id);
         Self {
             id,
             controller_send,
@@ -79,10 +78,7 @@ impl Drone for RustBustersDrone {
 
     /// Runs the drone
     fn run(&mut self) {
-        info!(
-            "Run - Starting to run drone with ID {}",
-            self.id
-        );
+        info!("Run - Starting to run drone with ID {}", self.id);
         self.play_sound(SPAWN_SOUND);
         while self.running || !self.packet_recv.is_empty() {
             select_biased! {
@@ -129,10 +125,7 @@ impl Drone for RustBustersDrone {
                 },
             }
         }
-        info!(
-            "Stop - Stopped running drone with ID {}",
-            self.id
-        );
+        info!("Stop - Stopped running drone with ID {}", self.id);
     }
 }
 
@@ -143,11 +136,14 @@ impl RustBustersDrone {
     /// - `optimized_routing`: The value to set the `optimized_routing` field to
     pub fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
-        let optimized_routing_state = if self.hunt_mode { String::from("enabled") } else { String::from("disabled") };
+        let optimized_routing_state = if self.hunt_mode {
+            String::from("enabled")
+        } else {
+            String::from("disabled")
+        };
         debug!(
             "Drone {} - Optimized routing {}",
-            self.id,
-            optimized_routing_state
+            self.id, optimized_routing_state
         );
     }
 
@@ -157,27 +153,21 @@ impl RustBustersDrone {
     /// - `hunt_mode`: The value to set the `hunt_mode` field to
     pub fn set_hunt_mode(&mut self, hunt_mode: bool) {
         self.hunt_mode = hunt_mode;
-        let hunt_mode_state = if self.hunt_mode { String::from("enabled") } else { String::from("disabled") };
-        debug!(
-            "Drone {} - Hunt mode {}",
-            self.id,
-            hunt_mode_state
-        );
+        let hunt_mode_state = if self.hunt_mode {
+            String::from("enabled")
+        } else {
+            String::from("disabled")
+        };
+        debug!("Drone {} - Hunt mode {}", self.id, hunt_mode_state);
     }
 
     /// Enables the sound system for the drone
     pub fn enable_sound(&mut self) {
         if let Ok((stream, handle)) = OutputStream::try_default() {
             self.sound_sys = Some((stream, handle));
-            info!(
-                "Drone {} - Sound system enabled",
-                self.id
-            );
+            info!("Drone {} - Sound system enabled", self.id);
         } else {
-            warn!(
-                "Drone {} - Error in enabling sound system",
-                self.id
-            );
+            warn!("Drone {} - Error in enabling sound system", self.id);
         }
     }
 }
