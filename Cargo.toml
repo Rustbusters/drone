@@ -3,10 +3,13 @@ name = "rustbusters-drone"
 version = "1.0.0"
 edition = "2021"
 
+[features]
+sounds = ["dep:rodio"]
+
 [dependencies]
 wg_2024 = { git = "https://github.com/WGL-2024/WGL_repo_2024.git", features = ["serialize"] }
 
 crossbeam-channel = "0.5"
 rand = "0.8"
 log = "0.4"
-rodio = "0.20.1"
+rodio = { version = "0.20.1", optional = true }

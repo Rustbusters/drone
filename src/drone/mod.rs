@@ -4,12 +4,15 @@ pub mod handle_flood;
 pub mod hunt;
 pub mod optimize_route;
 pub mod send_nack;
+#[cfg(feature = "sounds")]
 mod sounds;
 mod test;
 
+#[cfg(feature = "sounds")]
 use crate::drone::sounds::SPAWN_SOUND;
 use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};
+#[cfg(feature = "sounds")]
 use rodio::{OutputStream, OutputStreamHandle};
 use std::collections::{HashMap, HashSet};
 use wg_2024::controller::{DroneCommand, DroneEvent};
@@ -32,6 +35,7 @@ pub struct RustBustersDrone {
     optimized_routing: bool,
     running: bool,
     hunt_mode: bool,
+    #[cfg(feature = "sounds")]
     sound_sys: Option<(OutputStream, OutputStreamHandle)>,
 }
 
@@ -61,7 +65,7 @@ impl Drone for RustBustersDrone {
         pdr: f32,
     ) -> Self {
         info!("Start - Initializing drone with ID {}", id);
-        Self {
+        let drone = Self {
             id,
             controller_send,
             controller_recv,
@@ -72,13 +76,20 @@ impl Drone for RustBustersDrone {
             optimized_routing: false,
             running: true,
             hunt_mode: false,
+            #[cfg(feature = "sounds")]
             sound_sys: None,
-        }
+        };
+        
+        #[cfg(feature = "sounds")]
+        drone.play_sound(SPAWN_SOUND);
+        
+        drone
     }
 
     /// Runs the drone
     fn run(&mut self) {
         info!("Run - Starting to run drone with ID {}", self.id);
+        #[cfg(feature = "sounds")]
         self.play_sound(SPAWN_SOUND);
         while self.running || !self.packet_recv.is_empty() {
             select_biased! {
@@ -162,6 +173,7 @@ impl RustBustersDrone {
     }
 
     /// Enables the sound system for the drone
+    #[cfg(feature = "sounds")]
     pub fn enable_sound(&mut self) {
         if let Ok((stream, handle)) = OutputStream::try_default() {
             self.sound_sys = Some((stream, handle));
