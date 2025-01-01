@@ -136,7 +136,7 @@ impl RustBustersDrone {
     /// - `optimized_routing`: The value to set the `optimized_routing` field to
     pub fn set_optimized_routing(&mut self, optimized_routing: bool) {
         self.optimized_routing = optimized_routing;
-        let optimized_routing_state = if self.hunt_mode {
+        let optimized_routing_state = if self.optimized_routing {
             String::from("enabled")
         } else {
             String::from("disabled")
