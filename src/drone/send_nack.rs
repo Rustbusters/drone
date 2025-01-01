@@ -1,9 +1,9 @@
 use super::RustBustersDrone;
+#[cfg(feature = "sounds")]
 use crate::drone::sounds::{DROP_SOUND, NACK_SOUND};
 use log::{debug, error, info, trace, warn};
 use wg_2024::controller::DroneEvent::ControllerShortcut;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
-use wg_2024::packet::NackType::Dropped;
 use wg_2024::packet::{Nack, Packet, PacketType};
 
 impl RustBustersDrone {
@@ -60,10 +60,14 @@ impl RustBustersDrone {
             );
         };
 
-        if nack_type == Dropped {
-            self.play_sound(DROP_SOUND);
-        } else {
-            self.play_sound(NACK_SOUND);
+        #[cfg(feature = "sounds")]
+        {
+            use wg_2024::packet::NackType::Dropped;
+            if nack_type == Dropped {
+                self.play_sound(DROP_SOUND);
+            } else {
+                self.play_sound(NACK_SOUND);
+            }
         }
 
         if let Some(next_sender) = self.packet_send.get(&next_hop).cloned() {

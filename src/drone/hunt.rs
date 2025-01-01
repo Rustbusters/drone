@@ -1,3 +1,4 @@
+#[cfg(feature = "sounds")]
 use crate::drone::sounds::HUNT_SOUND;
 use crate::RustBustersDrone;
 use wg_2024::controller::DroneEvent;
@@ -45,6 +46,7 @@ impl RustBustersDrone {
 
         // Step 3: send the packet to the SC
         if self.controller_send.send(kill_node_event).is_ok() {
+            #[cfg(feature = "sounds")]
             self.play_sound(HUNT_SOUND);
             Ok(())
         } else {

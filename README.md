@@ -195,6 +195,13 @@ Our magnificent drone allows to reproduce sounds based on the packets received b
 
 Code example for activating sounds:
 
+In `Cargo.toml`:
+```toml
+[dependencies]
+rustbusters-drone = { git = "...", features = ["sounds"] }
+```
+
+In your code:
 ```rust
 let mut drone = RustBustersDrone::new(...);
 drone.enable_sound(); // enables sounds
