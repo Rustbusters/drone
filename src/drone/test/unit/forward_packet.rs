@@ -100,7 +100,7 @@ mod forward {
 
                         match nack.nack_type {
                             NackType::UnexpectedRecipient(e) => {
-                                assert_eq!(e, 1);
+                                assert_eq!(e, drone.id);
                             }
                             _ => panic!("Unexpected nack type: {:?}", nack.nack_type),
                         }
@@ -109,6 +109,8 @@ mod forward {
                 },
                 _ => panic!("Unexpected event: {:?}", event),
             }
+        } else {
+            panic!("Timeout: no event received");
         }
     }
 
