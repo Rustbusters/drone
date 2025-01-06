@@ -2,6 +2,7 @@ use super::RustBustersDrone;
 #[cfg(feature = "sounds")]
 use crate::drone::sounds::{DROP_SOUND, NACK_SOUND};
 use log::{debug, error, info, trace, warn};
+use wg_2024::controller::DroneEvent;
 use wg_2024::controller::DroneEvent::ControllerShortcut;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, Packet, PacketType};
@@ -79,7 +80,7 @@ impl RustBustersDrone {
                     e
                 );
                 self.packet_send.remove(&next_hop);
-                self.send_to_sc(ControllerShortcut(nack_packet));
+                self.send_to_sc(ControllerShortcut(nack_packet.clone()));
                 warn!(
                     "Drone {} - Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, next_hop
@@ -102,7 +103,9 @@ impl RustBustersDrone {
                 self.id,
                 nack_packet
             );
-            self.send_to_sc(ControllerShortcut(nack_packet));
+            self.send_to_sc(ControllerShortcut(nack_packet.clone()));
         }
+        println!("{:?}", nack_packet);
+        self.send_to_sc(DroneEvent::PacketSent(nack_packet));
     }
 }

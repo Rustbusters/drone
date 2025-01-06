@@ -532,6 +532,7 @@ mod forward {
                         _ => panic!("Unexpected event: {:?}", packet.pack_type),
                     }
                 }
+                DroneEvent::PacketSent(_) => (),
                 _ => panic!("Unexpected event: {event:?}"),
             }
         } else {
@@ -596,6 +597,7 @@ mod forward {
                     }
                     _ => panic!("Unexpected packet: {:?}", packet.pack_type),
                 },
+                DroneEvent::PacketSent(_) => (),
                 _ => panic!("Unexpected event: {event:?}"),
             }
         } else {
