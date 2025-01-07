@@ -2,6 +2,7 @@ use super::RustBustersDrone;
 #[cfg(feature = "sounds")]
 use crate::drone::sounds::{DROP_SOUND, NACK_SOUND};
 use log::{debug, error, info, trace, warn};
+use wg_2024::controller::DroneEvent;
 use wg_2024::controller::DroneEvent::ControllerShortcut;
 use wg_2024::network::{NodeId, SourceRoutingHeader};
 use wg_2024::packet::{Nack, Packet, PacketType};
@@ -14,11 +15,7 @@ impl RustBustersDrone {
     /// - `nack`: The Nack to be sent
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn send_nack(&mut self, packet: &Packet, nack: Nack, allow_optimized: bool) {
-        debug!(
-            "Drone {} - Send Nack: {:?}",
-            self.id,
-            nack
-        );
+        debug!("Drone {} - Send Nack: {:?}", self.id, nack);
         let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone
         let nack_type = nack.nack_type;
 
@@ -34,7 +31,7 @@ impl RustBustersDrone {
         let reversed_path = path_to_sender
             .iter()
             .rev()
-            .cloned()
+            .copied()
             .collect::<Vec<NodeId>>();
 
         let hops = if self.optimized_routing && allow_optimized {
@@ -74,12 +71,10 @@ impl RustBustersDrone {
             if let Err(e) = next_sender.send(nack_packet.clone()) {
                 error!(
                     "Drone {} - Error in sending Nack to {}: {}",
-                    self.id,
-                    next_hop,
-                    e
+                    self.id, next_hop, e
                 );
                 self.packet_send.remove(&next_hop);
-                self.send_to_sc(ControllerShortcut(nack_packet));
+                self.send_to_sc(ControllerShortcut(nack_packet.clone()));
                 warn!(
                     "Drone {} - Neighbor {} has been removed from packet_send due to channel closure",
                     self.id, next_hop
@@ -87,22 +82,17 @@ impl RustBustersDrone {
             } else {
                 info!(
                     "Drone {} - Forwarded Nack to next hop: {}",
-                    self.id,
-                    next_hop
+                    self.id, next_hop
                 );
             }
         } else {
             warn!(
                 "Drone {} - Unable to send Nack: next hop {} is not a neighbor",
-                self.id,
-                next_hop
+                self.id, next_hop
             );
-            trace!(
-                "Drone {} - Nack Packet: {:?}",
-                self.id,
-                nack_packet
-            );
-            self.send_to_sc(ControllerShortcut(nack_packet));
+            trace!("Drone {} - Nack Packet: {:?}", self.id, nack_packet);
+            self.send_to_sc(ControllerShortcut(nack_packet.clone()));
         }
+        self.send_to_sc(DroneEvent::PacketSent(nack_packet));
     }
 }

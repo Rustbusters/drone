@@ -11,11 +11,7 @@ impl RustBustersDrone {
     /// - `packet`: The packet to be forwarded
     /// - `allow_optimized`: A boolean indicating whether optimized routing is allowed
     pub fn forward_packet(&mut self, mut packet: Packet, allow_optimized: bool) {
-        trace!(
-            "Drone {} - Forwarding packet: {:?}",
-            self.id,
-            packet
-        );
+        trace!("Drone {} - Forwarding packet: {:?}", self.id, packet);
         let hop_index = packet.routing_header.hop_index;
 
         // Step 1: Check if hops[hop_index] matches self.id
@@ -61,15 +57,10 @@ impl RustBustersDrone {
                 if self.hunt_mode && nack.nack_type == NackType::Dropped {
                     info!(
                         "Drone {} - Received Nack::Dropped. Packet: {:?}",
-                        self.id,
-                        packet
+                        self.id, packet
                     );
                     if let Err(e) = self.hunt_ghost(packet.routing_header.hops[0]) {
-                        warn!(
-                            "Drone {} - Error in hunting ghost drone: {}",
-                            self.id,
-                            e
-                        );
+                        warn!("Drone {} - Error in hunting ghost drone: {}", self.id, e);
                     }
                 }
                 self.forward_other_packet(&mut packet);
@@ -105,9 +96,7 @@ impl RustBustersDrone {
         {
             warn!(
                 "Drone {} - Error Unexpected Recipient: expected {}, got {}",
-                self.id,
-                packet.routing_header.hops[hop_index],
-                self.id
+                self.id, packet.routing_header.hops[hop_index], self.id
             );
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 if let Some(pos) = packet
@@ -148,10 +137,7 @@ impl RustBustersDrone {
         allow_optimized: bool,
     ) -> bool {
         if packet.routing_header.hops.last() == Some(&self.id) {
-            warn!(
-                "Drone {} - Sending Nack: destination is drone",
-                self.id
-            );
+            warn!("Drone {} - Sending Nack: destination is drone", self.id);
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 self.send_nack(
                     packet,
@@ -185,14 +171,9 @@ impl RustBustersDrone {
         if !self.packet_send.contains_key(&next_hop) {
             warn!(
                 "Drone {} - Next hop {} is not a neighbor.",
-                self.id,
-                next_hop
+                self.id, next_hop
             );
-            trace!(
-                "Drone {} - Packet: {:?}",
-                self.id,
-                packet
-            );
+            trace!("Drone {} - Packet: {:?}", self.id, packet);
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
                 self.send_nack(
                     packet,
@@ -242,15 +223,17 @@ impl RustBustersDrone {
                 },
                 allow_optimized,
             );
+
+            let mut dropped_packet = packet.clone();
+            dropped_packet.routing_header.hop_index -= 1;
             // Send PacketDropped event to the controller
             if let Err(e) = self
                 .controller_send
-                .send(DroneEvent::PacketDropped(packet.clone()))
+                .send(DroneEvent::PacketDropped(dropped_packet))
             {
                 error!(
                     "Drone {} - Error in sending DroneEvent::PacketDropped event: {}",
-                    self.id,
-                    e
+                    self.id, e
                 );
             }
             return;
@@ -271,9 +254,7 @@ impl RustBustersDrone {
                 );
                 error!(
                     "Drone {} - Error in sending packet to {}: {}",
-                    self.id,
-                    next_hop,
-                    err
+                    self.id, next_hop, err
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -288,22 +269,19 @@ impl RustBustersDrone {
                 {
                     error!(
                         "Drone {} - Error in sending DroneEvent::PacketSent event: {}",
-                        self.id,
-                        e
+                        self.id, e
                     );
                 } else {
                     info!(
                         "Drone {} - Forwarded Packet to next hop: {}",
-                        self.id,
-                        next_hop
+                        self.id, next_hop
                     );
                 }
             }
         } else {
             warn!(
                 "Drone {} - Not found neighbor {} in packet_send.",
-                self.id,
-                next_hop
+                self.id, next_hop
             );
 
             self.send_nack(
@@ -341,9 +319,7 @@ impl RustBustersDrone {
                 self.packet_send.remove(&next_hop);
                 error!(
                     "Drone {} - Error in sending Packet to {}: {}",
-                    self.id,
-                    next_hop,
-                    e
+                    self.id, next_hop, e
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -356,31 +332,24 @@ impl RustBustersDrone {
             } else {
                 info!(
                     "Drone {} - Forwarded Packet to next hop: {}",
-                    self.id,
-                    next_hop
+                    self.id, next_hop
                 );
             }
         } else {
             warn!(
                 "Drone {} - Unable to forward Packet: next hop {} is not a neighbor",
-                self.id,
-                next_hop
+                self.id, next_hop
             );
             self.send_to_sc(DroneEvent::ControllerShortcut(packet.clone()));
         }
+        self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
     }
 
     pub(crate) fn send_to_sc(&mut self, event: DroneEvent) {
         if self.controller_send.send(event).is_ok() {
-            info!(
-                "Drone {} - Sent DroneEvent to SC",
-                self.id
-            );
+            info!("Drone {} - Sent DroneEvent to SC", self.id);
         } else {
-            error!(
-                "Drone {} - Error in sending event to SC",
-                self.id
-            );
+            error!("Drone {} - Error in sending event to SC", self.id);
         }
     }
 }
