@@ -651,6 +651,7 @@ mod forward {
     #[test]
     fn test_forward_fragment_with_optimized_routing_when_drone_is_destination() {
         let (mut drone, _, _) = setup_drone();
+        drone.pdr = 0;
         let (neighbor_1_sender, neighbor_1_receiver) = unbounded();
         drone.packet_send.insert(1, neighbor_1_sender);
         let (neighbor_3_sender, _neighbor_3_receiver) = unbounded();
