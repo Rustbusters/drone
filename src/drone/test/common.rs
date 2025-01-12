@@ -25,8 +25,6 @@ pub fn setup_drone() -> (RustBustersDrone, Sender<DroneEvent>, Receiver<DroneEve
         optimized_routing: false,
         running: true,
         hunt_mode: false,
-        #[cfg(feature = "sounds")]
-        sound_sys: None,
     };
 
     (drone, controller_send, controller_recv)

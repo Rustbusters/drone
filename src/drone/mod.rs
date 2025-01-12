@@ -9,8 +9,6 @@ mod sounds;
 mod test;
 
 #[cfg(feature = "sounds")]
-use crate::drone::sounds::sounds_feat::ThreadSafeAudio;
-#[cfg(feature = "sounds")]
 use crate::drone::sounds::sounds_feat::SPAWN_SOUND;
 use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};

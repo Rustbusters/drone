@@ -25,10 +25,7 @@ impl RustBustersDrone {
                 #[cfg(feature = "sounds")]
                 {
                     self.play_sound(CRASH_SOUND);
-                    if self.sound_sys.is_some() {
-                        // Wait for the sound to finish playing
-                        sleep(Duration::from_millis(1500));
-                    }
+                    sleep(Duration::from_millis(1500));
                 }
                 self.running = false;
             }
