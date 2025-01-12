@@ -7,6 +7,7 @@ pub mod sounds_feat {
     use lazy_static::lazy_static;
     use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
     use std::io::Cursor;
+    use std::sync::Mutex;
 
     pub(crate) const SPAWN_SOUND: &[u8] = include_bytes!("../../sfx/spawn.mp3");
     pub(crate) const CRASH_SOUND: &[u8] = include_bytes!("../../sfx/crash.mp3");
@@ -15,7 +16,7 @@ pub mod sounds_feat {
     pub(crate) const HUNT_SOUND: &[u8] = include_bytes!("../../sfx/hunt.mp3");
 
     lazy_static! {
-        pub(crate) static ref SOUND_SYS: Option<ThreadSafeAudio> = None;
+        pub(crate) static ref SOUND_SYS: Mutex<Option<ThreadSafeAudio>> = Mutex::new(None);
     }
 
     impl RustBustersDrone {
@@ -39,7 +40,7 @@ pub mod sounds_feat {
 
     impl ThreadSafeAudio {
         pub fn new() -> Self {
-            if let Some(sound_sys) = &*SOUND_SYS {
+            if let Some(sound_sys) = &*SOUND_SYS.lock().unwrap() {
                 sound_sys.clone()
             } else {
                 let (tx, rx) = unbounded::<AudioCommand>();
@@ -51,7 +52,9 @@ pub mod sounds_feat {
                     }
                 });
 
-                Self { command_sender: tx }
+                let audio = Self { command_sender: tx };
+                *SOUND_SYS.lock().unwrap() = Some(audio.clone());
+                audio
             }
         }
 
