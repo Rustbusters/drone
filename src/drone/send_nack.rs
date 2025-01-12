@@ -1,6 +1,6 @@
 use super::RustBustersDrone;
 #[cfg(feature = "sounds")]
-use crate::drone::sounds::{DROP_SOUND, NACK_SOUND};
+use crate::drone::sounds::sounds_feat::{DROP_SOUND, NACK_SOUND};
 use log::{debug, error, info, trace, warn};
 use wg_2024::controller::DroneEvent;
 use wg_2024::controller::DroneEvent::ControllerShortcut;

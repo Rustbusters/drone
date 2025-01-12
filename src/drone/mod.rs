@@ -9,11 +9,11 @@ mod sounds;
 mod test;
 
 #[cfg(feature = "sounds")]
-use crate::drone::sounds::SPAWN_SOUND;
+use crate::drone::sounds::sounds_feat::ThreadSafeAudio;
+#[cfg(feature = "sounds")]
+use crate::drone::sounds::sounds_feat::SPAWN_SOUND;
 use crossbeam_channel::{select_biased, Receiver, Sender};
 use log::{debug, info, trace, warn};
-#[cfg(feature = "sounds")]
-use rodio::{OutputStream, OutputStreamHandle};
 use std::collections::{HashMap, HashSet};
 use wg_2024::controller::{DroneCommand, DroneEvent};
 use wg_2024::drone::Drone;
@@ -36,7 +36,7 @@ pub struct RustBustersDrone {
     running: bool,
     hunt_mode: bool,
     #[cfg(feature = "sounds")]
-    sound_sys: Option<(OutputStream, OutputStreamHandle)>,
+    sound_sys: Option<ThreadSafeAudio>,
 }
 
 impl Drone for RustBustersDrone {
@@ -79,10 +79,10 @@ impl Drone for RustBustersDrone {
             #[cfg(feature = "sounds")]
             sound_sys: None,
         };
-        
+
         #[cfg(feature = "sounds")]
         drone.play_sound(SPAWN_SOUND);
-        
+
         drone
     }
 
@@ -175,11 +175,6 @@ impl RustBustersDrone {
     /// Enables the sound system for the drone
     #[cfg(feature = "sounds")]
     pub fn enable_sound(&mut self) {
-        if let Ok((stream, handle)) = OutputStream::try_default() {
-            self.sound_sys = Some((stream, handle));
-            info!("Drone {} - Sound system enabled", self.id);
-        } else {
-            warn!("Drone {} - Error in enabling sound system", self.id);
-        }
+        self.sound_sys = Some(ThreadSafeAudio::new());
     }
 }

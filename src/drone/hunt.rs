@@ -1,5 +1,5 @@
 #[cfg(feature = "sounds")]
-use crate::drone::sounds::HUNT_SOUND;
+use crate::drone::sounds::sounds_feat::HUNT_SOUND;
 use crate::RustBustersDrone;
 use wg_2024::controller::DroneEvent;
 use wg_2024::network::{NodeId, SourceRoutingHeader};

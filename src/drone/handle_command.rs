@@ -1,6 +1,6 @@
 use super::RustBustersDrone;
 #[cfg(feature = "sounds")]
-use crate::drone::sounds::CRASH_SOUND;
+use crate::drone::sounds::sounds_feat::CRASH_SOUND;
 use log::info;
 #[cfg(feature = "sounds")]
 use std::{thread::sleep, time::Duration};
