@@ -1,6 +1,6 @@
 use super::RustBustersDrone;
 #[cfg(feature = "sounds")]
-use crate::drone::sounds::CRASH_SOUND;
+use crate::drone::sounds::sounds_feat::CRASH_SOUND;
 use log::info;
 #[cfg(feature = "sounds")]
 use std::{thread::sleep, time::Duration};
@@ -25,10 +25,7 @@ impl RustBustersDrone {
                 #[cfg(feature = "sounds")]
                 {
                     self.play_sound(CRASH_SOUND);
-                    if self.sound_sys.is_some() {
-                        // Wait for the sound to finish playing
-                        sleep(Duration::from_millis(1500));
-                    }
+                    sleep(Duration::from_millis(1500));
                 }
                 self.running = false;
             }

@@ -13,3 +13,4 @@ crossbeam-channel = "0.5"
 rand = "0.8"
 log = "0.4"
 rodio = { version = "0.20.1", optional = true }
+lazy_static = "1.5.0"
