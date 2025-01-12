@@ -35,8 +35,6 @@ pub struct RustBustersDrone {
     optimized_routing: bool,
     running: bool,
     hunt_mode: bool,
-    #[cfg(feature = "sounds")]
-    sound_sys: Option<ThreadSafeAudio>,
 }
 
 impl Drone for RustBustersDrone {
@@ -76,8 +74,6 @@ impl Drone for RustBustersDrone {
             optimized_routing: false,
             running: true,
             hunt_mode: false,
-            #[cfg(feature = "sounds")]
-            sound_sys: None,
         };
 
         #[cfg(feature = "sounds")]
@@ -172,9 +168,8 @@ impl RustBustersDrone {
         debug!("Drone {} - Hunt mode {}", self.id, hunt_mode_state);
     }
 
-    /// Enables the sound system for the drone
     #[cfg(feature = "sounds")]
-    pub fn enable_sound(&mut self) {
-        self.sound_sys = Some(ThreadSafeAudio::new());
+    pub fn play_sound(&self, sound: &'static [u8]) {
+        sounds::sounds_feat::play_sound(sound);
     }
 }

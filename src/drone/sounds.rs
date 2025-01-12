@@ -1,10 +1,8 @@
 #[cfg(feature = "sounds")]
 pub mod sounds_feat {
-    use crate::RustBustersDrone;
     use crossbeam_channel::{unbounded, Receiver, Sender};
-    use log::warn;
-
     use lazy_static::lazy_static;
+    use log::warn;
     use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
     use std::io::Cursor;
     use std::sync::Mutex;
@@ -16,45 +14,29 @@ pub mod sounds_feat {
     pub(crate) const HUNT_SOUND: &[u8] = include_bytes!("../../sfx/hunt.mp3");
 
     lazy_static! {
-        pub(crate) static ref SOUND_SYS: Mutex<Option<ThreadSafeAudio>> = Mutex::new(None);
+        static ref AUDIO_SYSTEM: Mutex<AudioSystem> = Mutex::new(AudioSystem::new());
     }
 
-    impl RustBustersDrone {
-        pub(crate) fn play_sound(&self, sound: &'static [u8]) {
-            if let Some(sound_sys) = &self.sound_sys {
-                sound_sys.play_sound(sound);
-            } else {
-                warn!("Error - Sound system not initialized");
-            }
-        }
+    pub struct AudioSystem {
+        command_sender: Option<Sender<AudioCommand>>,
     }
 
-    pub enum AudioCommand {
-        PlaySound(&'static [u8]),
-    }
-
-    #[derive(Clone)]
-    pub struct ThreadSafeAudio {
-        command_sender: Sender<AudioCommand>,
-    }
-
-    impl ThreadSafeAudio {
-        pub fn new() -> Self {
-            if let Some(sound_sys) = &*SOUND_SYS.lock().unwrap() {
-                sound_sys.clone()
-            } else {
-                let (tx, rx) = unbounded::<AudioCommand>();
-
-                // Spawn del thread audio dedicato
-                std::thread::spawn(move || {
+    impl AudioSystem {
+        fn new() -> Self {
+            let (tx, rx) = unbounded::<AudioCommand>();
+            
+            // Spawn del thread audio dedicato una sola volta
+            std::thread::Builder::new()
+                .name("audio-thread".to_string())
+                .spawn(move || {
                     if let Ok((stream, handle)) = OutputStream::try_default() {
                         Self::audio_thread_loop(&rx, &stream, &handle);
                     }
-                });
+                })
+                .expect("Failed to spawn audio thread");
 
-                let audio = Self { command_sender: tx };
-                *SOUND_SYS.lock().unwrap() = Some(audio.clone());
-                audio
+            Self {
+                command_sender: Some(tx),
             }
         }
 
@@ -66,14 +48,13 @@ pub mod sounds_feat {
             while let Ok(cmd) = receiver.recv() {
                 match cmd {
                     AudioCommand::PlaySound(sound_data) => {
-                        // Logica per riprodurre il suono usando handle
                         if let Ok(sink) = Sink::try_new(handle) {
                             let cursor = Cursor::new(sound_data);
                             if let Ok(source) = Decoder::new(cursor) {
                                 sink.append(source);
                                 sink.detach();
                             } else {
-                                warn!("Error - Failed to decoded audio file");
+                                warn!("Error - Failed to decode audio file");
                             }
                         } else {
                             warn!("Error - Failed to create audio sink");
@@ -84,12 +65,21 @@ pub mod sounds_feat {
         }
 
         pub fn play_sound(&self, sound_data: &'static [u8]) {
-            if let Err(e) = self
-                .command_sender
-                .send(AudioCommand::PlaySound(sound_data))
-            {
-                warn!("Error - Failed to send audio command: {:?}", e);
+            if let Some(sender) = &self.command_sender {
+                if let Err(e) = sender.send(AudioCommand::PlaySound(sound_data)) {
+                    warn!("Error - Failed to send audio command: {:?}", e);
+                }
             }
         }
+    }
+
+    pub fn play_sound(sound_data: &'static [u8]) {
+        if let Ok(audio_system) = AUDIO_SYSTEM.lock() {
+            audio_system.play_sound(sound_data);
+        }
+    }
+
+    pub enum AudioCommand {
+        PlaySound(&'static [u8]),
     }
 }
