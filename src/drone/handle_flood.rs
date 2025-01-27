@@ -103,14 +103,12 @@ impl RustBustersDrone {
                     sender_id
                 );
 
-                self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
+                self.send_to_sc(DroneEvent::ControllerShortcut(response_packet.clone()));
             } else {
                 info!(
                     "Drone {} - Sent FloodResponse(flood_id={}, sender_id={})",
                     self.id, flood_request.flood_id, sender_id
                 );
-
-                self.send_to_sc(DroneEvent::PacketSent(response_packet));
             }
         } else {
             warn!(
@@ -118,8 +116,9 @@ impl RustBustersDrone {
                 self.id, sender_id
             );
 
-            self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
+            self.send_to_sc(DroneEvent::ControllerShortcut(response_packet.clone()));
         }
+        self.send_to_sc(DroneEvent::PacketSent(response_packet));
     }
 
     /// Spread a `FloodRequest` packet to neighbors
@@ -170,7 +169,7 @@ impl RustBustersDrone {
                 },
                 session_id,
             };
-            if let Err(e) = neighbor_sender.send(packet) {
+            if let Err(e) = neighbor_sender.send(packet.clone()) {
                 // Remove the neighbor from packet_send
                 self.packet_send.remove(&neighbor_id);
                 error!(
@@ -187,6 +186,7 @@ impl RustBustersDrone {
                     "Drone {} - Forwarded FloodRequest(flood_id={}, sender_id={}) to neighbor: {}",
                     self.id, flood_request.flood_id, sender_id, neighbor_id
                 );
+                self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
             }
         }
     }
