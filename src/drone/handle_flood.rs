@@ -16,18 +16,12 @@ impl RustBustersDrone {
             return;
         }
 
-        debug!(
-            "Drone {} - Received FloodRequest",
-            self.id
-        );
+        debug!("Drone {} - Received FloodRequest", self.id);
         if let PacketType::FloodRequest(mut flood_request) = packet.pack_type {
             let sender_id = if let Some(&(last_node_id, _)) = flood_request.path_trace.last() {
                 last_node_id
             } else {
-                error!(
-                    "Drone {} - path_trace is empty in handle_flood",
-                    self.id
-                );
+                error!("Drone {} - path_trace is empty in handle_flood", self.id);
                 flood_request.initiator_id
             };
 
@@ -64,9 +58,7 @@ impl RustBustersDrone {
     ) {
         debug!(
             "Drone {} - Already processed FloodRequest(flood_id={}, sender_id={})",
-            self.id,
-            flood_request.flood_id,
-            sender_id
+            self.id, flood_request.flood_id, sender_id
         );
         // Send FloodResponse back to sender
         let response = FloodResponse {
@@ -98,10 +90,7 @@ impl RustBustersDrone {
                 self.packet_send.remove(&sender_id);
                 error!(
                     "Drone {} - Error in sending FloodResponse(flood_id={}, sender_id={}): {}",
-                    self.id,
-                    flood_request.flood_id,
-                    sender_id,
-                    e
+                    self.id, flood_request.flood_id, sender_id, e
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -109,26 +98,22 @@ impl RustBustersDrone {
                     sender_id
                 );
 
-                self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
+                self.send_to_sc(DroneEvent::ControllerShortcut(response_packet.clone()));
             } else {
                 info!(
                     "Drone {} - Sent FloodResponse(flood_id={}, sender_id={})",
-                    self.id,
-                    flood_request.flood_id,
-                    sender_id
+                    self.id, flood_request.flood_id, sender_id
                 );
-
-                self.send_to_sc(DroneEvent::PacketSent(response_packet));
             }
         } else {
             warn!(
                 "Drone {} - Not found Sender {} in packet_send",
-                self.id,
-                sender_id
+                self.id, sender_id
             );
 
-            self.send_to_sc(DroneEvent::ControllerShortcut(response_packet));
+            self.send_to_sc(DroneEvent::ControllerShortcut(response_packet.clone()));
         }
+        self.send_to_sc(DroneEvent::PacketSent(response_packet));
     }
 
     /// Spread a `FloodRequest` packet to neighbors
@@ -147,9 +132,7 @@ impl RustBustersDrone {
     ) {
         debug!(
             "Drone {} - FloodRequest(flood_id={}, sender_id={}) is being processed",
-            self.id,
-            flood_request.flood_id,
-            sender_id
+            self.id, flood_request.flood_id, sender_id
         );
         self.received_floods
             .insert((flood_request.flood_id, flood_request.initiator_id));
@@ -164,9 +147,7 @@ impl RustBustersDrone {
         if neighbors.is_empty() {
             debug!(
                 "Drone {} - No neighbors to forward FloodRequest(flood_id={}, sender_id={}) to",
-                self.id,
-                flood_request.flood_id,
-                sender_id
+                self.id, flood_request.flood_id, sender_id
             );
             self.send_flood_response(flood_request, session_id, sender_id);
 
@@ -183,16 +164,12 @@ impl RustBustersDrone {
                 },
                 session_id,
             };
-            if let Err(e) = neighbor_sender.send(packet) {
+            if let Err(e) = neighbor_sender.send(packet.clone()) {
                 // Remove the neighbor from packet_send
                 self.packet_send.remove(&neighbor_id);
                 error!(
                     "Drone {} - Error in sending FloodRequest(flood_id={}, sender_id={}) to {}: {}",
-                    self.id,
-                    flood_request.flood_id,
-                    sender_id,
-                    neighbor_id,
-                    e
+                    self.id, flood_request.flood_id, sender_id, neighbor_id, e
                 );
                 warn!(
                     "Drone {} - Removed neighbor with ID {} from packet_send due to channel closure",
@@ -202,11 +179,9 @@ impl RustBustersDrone {
             } else {
                 info!(
                     "Drone {} - Forwarded FloodRequest(flood_id={}, sender_id={}) to neighbor: {}",
-                    self.id,
-                    flood_request.flood_id,
-                    sender_id,
-                    neighbor_id
+                    self.id, flood_request.flood_id, sender_id, neighbor_id
                 );
+                self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
             }
         }
     }
