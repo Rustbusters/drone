@@ -17,6 +17,7 @@ impl RustBustersDrone {
     pub fn send_nack(&mut self, packet: &Packet, nack: Nack, allow_optimized: bool) {
         debug!("Drone {} - Send Nack: {:?}", self.id, nack);
         let hop_index = packet.routing_header.hop_index - 1; // hop_index: actual drone
+        #[cfg(feature = "sounds")]
         let nack_type = nack.nack_type;
 
         if hop_index == 0 || hop_index >= packet.routing_header.hops.len() {

@@ -132,11 +132,20 @@ mod flooding {
 
         drone.spread_flood_request(&flood_request, 42, UNKNOWN_NODE);
 
-        assert!(
-            controller_recv.try_recv().is_err(),
-            "No event should be sent to the SC"
-        );
-
+        if let Ok(event) = controller_recv.recv_timeout(std::time::Duration::from_secs(1)) {
+            match event {
+                DroneEvent::PacketSent(packet) => match packet.pack_type {
+                    PacketType::FloodRequest(request) => {
+                        assert_eq!(request.flood_id, 123);
+                        assert_eq!(request.path_trace, vec![(1, Server), (drone.id, Drone)]);
+                    }
+                    _ => panic!("Unexpected event: {:?}", packet.pack_type),
+                },
+                _ => panic!("Unexpected event: {event:?}"),
+            }
+        } else {
+            panic!("Timeout: no event received");
+        }
         assert!(
             !drone.packet_send.contains_key(&UNKNOWN_NODE),
             "Unknown node should not be added"

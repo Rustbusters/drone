@@ -45,7 +45,13 @@ impl RustBustersDrone {
         // Step 4: Identify next hop and check if it's a neighbor
         let next_hop = packet.routing_header.hops[packet.routing_header.hop_index];
         if !self.check_neighbor(&packet, next_hop, allow_optimized) {
-            return;
+            // if msg_fragment or flood_request return
+            match packet.pack_type {
+                PacketType::MsgFragment(_) | PacketType::FloodRequest(_) => {
+                    return;
+                }
+                _ => { /* needs to be sent to SC for forwarding */ }
+            }
         }
 
         // Step 5: Proceed based on packet type

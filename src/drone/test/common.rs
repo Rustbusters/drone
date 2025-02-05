@@ -1,7 +1,7 @@
 #![allow(unused)]
 use crate::RustBustersDrone;
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use wg_2024::controller::DroneEvent;
 use wg_2024::network::NodeId;
 
@@ -21,7 +21,7 @@ pub fn setup_drone() -> (RustBustersDrone, Sender<DroneEvent>, Receiver<DroneEve
         packet_recv,
         pdr: 10,
         packet_send,
-        received_floods: Default::default(),
+        received_floods: HashSet::default(),
         optimized_routing: false,
         running: true,
         hunt_mode: false,
