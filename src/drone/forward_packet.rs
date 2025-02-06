@@ -105,6 +105,7 @@ impl RustBustersDrone {
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
+                packet.routing_header.hops[hop_index] = self.id;
                 packet.routing_header.hop_index += 1;
                 self.send_nack(
                     packet,
