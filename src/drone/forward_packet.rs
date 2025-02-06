@@ -105,23 +105,16 @@ impl RustBustersDrone {
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
-                if let Some(pos) = packet
-                    .routing_header
-                    .hops
-                    .iter()
-                    .position(|&x| x == self.id)
-                {
-                    // Send Nack to the previous correct hop
-                    packet.routing_header.hop_index = pos + 1;
-                    self.send_nack(
-                        packet,
-                        Nack {
-                            fragment_index: frg.fragment_index,
-                            nack_type: NackType::UnexpectedRecipient(self.id),
-                        },
-                        allow_optimized,
-                    );
-                }
+                packet.routing_header.hops[hop_index] = self.id;
+                packet.routing_header.hop_index += 1;
+                self.send_nack(
+                    packet,
+                    Nack {
+                        fragment_index: frg.fragment_index,
+                        nack_type: NackType::UnexpectedRecipient(self.id),
+                    },
+                    allow_optimized,
+                );
             }
 
             return false;
@@ -213,7 +206,7 @@ impl RustBustersDrone {
         // Check for packet drop
         let should_drop = {
             let mut rng = rand::thread_rng();
-            rng.gen_range(0..100) <= self.pdr
+            rng.gen_range(1..=100) <= self.pdr
         };
 
         if should_drop {
@@ -340,6 +333,7 @@ impl RustBustersDrone {
                     "Drone {} - Forwarded Packet to next hop: {}",
                     self.id, next_hop
                 );
+                self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
             }
         } else {
             warn!(
@@ -348,7 +342,6 @@ impl RustBustersDrone {
             );
             self.send_to_sc(DroneEvent::ControllerShortcut(packet.clone()));
         }
-        self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
     }
 
     pub(crate) fn send_to_sc(&mut self, event: DroneEvent) {
