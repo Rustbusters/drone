@@ -105,30 +105,12 @@ impl RustBustersDrone {
                 self.id, packet.routing_header.hops[hop_index], self.id
             );
             if let PacketType::MsgFragment(frg) = &packet.pack_type {
-                // if let Some(pos) = packet
-                //     .routing_header
-                //     .hops
-                //     .iter()
-                //     .position(|&x| x == self.id)
-                // {
-                //     // Send Nack to the previous correct hop
-                //     packet.routing_header.hop_index = pos + 1;
-                //     self.send_nack(
-                //         packet,
-                //         Nack {
-                //             fragment_index: frg.fragment_index,
-                //             nack_type: NackType::UnexpectedRecipient(self.id),
-                //         },
-                //         allow_optimized,
-                //     );
-                // }
-
-                let sender = packet.routing_header.hops[hop_index - 1];
+                packet.routing_header.hop_index += 1;
                 self.send_nack(
                     packet,
                     Nack {
                         fragment_index: frg.fragment_index,
-                        nack_type: NackType::UnexpectedRecipient(sender),
+                        nack_type: NackType::UnexpectedRecipient(self.id),
                     },
                     allow_optimized,
                 );
