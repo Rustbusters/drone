@@ -213,7 +213,7 @@ impl RustBustersDrone {
         // Check for packet drop
         let should_drop = {
             let mut rng = rand::thread_rng();
-            rng.gen_range(0..100) <= self.pdr
+            rng.gen_range(1..=100) <= self.pdr
         };
 
         if should_drop {
