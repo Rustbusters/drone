@@ -109,6 +109,7 @@ impl RustBustersDrone {
                     "Drone {} - Sent FloodResponse(flood_id={}, sender_id={})",
                     self.id, flood_request.flood_id, sender_id
                 );
+                self.send_to_sc(DroneEvent::PacketSent(response_packet));
             }
         } else {
             warn!(
@@ -118,7 +119,6 @@ impl RustBustersDrone {
 
             self.send_to_sc(DroneEvent::ControllerShortcut(response_packet.clone()));
         }
-        self.send_to_sc(DroneEvent::PacketSent(response_packet));
     }
 
     /// Spread a `FloodRequest` packet to neighbors

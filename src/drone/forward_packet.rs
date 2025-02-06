@@ -340,6 +340,7 @@ impl RustBustersDrone {
                     "Drone {} - Forwarded Packet to next hop: {}",
                     self.id, next_hop
                 );
+                self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
             }
         } else {
             warn!(
@@ -348,7 +349,6 @@ impl RustBustersDrone {
             );
             self.send_to_sc(DroneEvent::ControllerShortcut(packet.clone()));
         }
-        self.send_to_sc(DroneEvent::PacketSent(packet.clone()));
     }
 
     pub(crate) fn send_to_sc(&mut self, event: DroneEvent) {

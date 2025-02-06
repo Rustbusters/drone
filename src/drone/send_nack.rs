@@ -85,6 +85,7 @@ impl RustBustersDrone {
                     "Drone {} - Forwarded Nack to next hop: {}",
                     self.id, next_hop
                 );
+                self.send_to_sc(DroneEvent::PacketSent(nack_packet));
             }
         } else {
             warn!(
@@ -94,6 +95,5 @@ impl RustBustersDrone {
             trace!("Drone {} - Nack Packet: {:?}", self.id, nack_packet);
             self.send_to_sc(ControllerShortcut(nack_packet.clone()));
         }
-        self.send_to_sc(DroneEvent::PacketSent(nack_packet));
     }
 }
